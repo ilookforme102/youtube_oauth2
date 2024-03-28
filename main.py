@@ -1,5 +1,5 @@
 from flask import Flask, redirect, request, session, url_for, jsonify
-from google_auth_oauthlib.flow import Flow
+from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import datetime
@@ -90,8 +90,7 @@ def fetch_youtube_metrics():
     session['credentials'] = credentials_to_dict(credentials)
 
     # return jsonify(response)
-    return session['credentials']
-
+    return response
 def credentials_to_dict(credentials):
     return {
         'token': credentials.token,
@@ -103,4 +102,4 @@ def credentials_to_dict(credentials):
     }
 
 if __name__ == '__main__':
-    app.run('localhost', 8880, debug=True)
+    app.run('localhost', 5000, debug=True)
