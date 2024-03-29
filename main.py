@@ -83,7 +83,8 @@ def fetch_youtube_metrics():
         startDate=start_date,
         endDate=end_date,
         metrics='estimatedMinutesWatched,views,likes,subscribersGained',
-        dimensions='day'
+        dimensions='day',
+        sort = 'day'
     ).execute()
 
     # Update the session with the new tokens
