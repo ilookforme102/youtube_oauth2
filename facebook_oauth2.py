@@ -1,8 +1,14 @@
-from flask import Flask, request, redirect, session
+from flask import Flask, request, redirect, session,jsonify,session
 import requests
+from datetime import datetime
+import time
 app = Flask(__name__)
 app.secret_key = 'f33924fea4dd7123a0daa9d2a7213679' #auto generate
 #IDs for the app
+#######################################################################
+##############LINK TO API DOC##########################################
+#API documentation https://developers.facebook.com/docs/graph-api/reference/insights/#page-reactions
+#Token Debug: https://developers.facebook.com/tools/debug/accesstoken/
 ACCESS_TOKEN = 'EAAUZBgUiZAG9oBO6t8ZCO9LgSVgc0gMepoUBLqZAvlZBSvrqZAfjiZBQ6e5uUepOlzZASNT8cTytIEdwrxjzDajMc0mEwKSG0uItFtKwO6ZClTFZBxTTJxn7sgsstjFPL98kxRZAITdJ9JtlqxCE8ttahRBAFGmR9NZAolyZCt9Wc1Rbgu9Nd0kl0icRs4bsXTDZB7HF2CfPcierwdgJX7tJa7RbYZD'
 CLIENT_SECRET = 'cb10b0592db22018171a652375a7513a' #AKA App secret
 CLIENT_TOKEN = '26f7416272ab27f379c4d75a6ca77dd1'
@@ -20,7 +26,6 @@ def home():
     else:
         # User is not logged in, redirect to login or show a landing page
         return redirect('/login')
-
 @app.route('/callback')
 def callback():
     # Facebook redirects back to your site with a code in the URL
@@ -34,7 +39,7 @@ def callback():
 
         # Use the access token to access the Facebook API
         #me_url = f'https://graph.facebook.com/v19.0/me?access_token={user_access_token}'
-        me_url = f'https://graph.facebook.com/v19.0/me/accounts?access_token={ACCESS_TOKEN}'
+        me_url = f'https://graph.facebook.com/v19.0/me/accounts?access_token={user_access_token}'
         user_data = requests.get(me_url).json()
         session['logged_in'] = True
         session['code'] = code
@@ -44,17 +49,53 @@ def callback():
         return f'Hello, {session['page_data']}!'
     else:
         return 'Access denied or cancelled by user', 400
+@app.route('/extend_token')
+def extend_token():
+    short_live_user_token = session['user_access_token']
+    url = f'https://graph.facebook.com/v19.0/oauth/access_token'
+    params = {
+        'grant_type': 'fb_exchange_token',
+        'client_id': CLIENT_ID,
+        'client_secret': CLIENT_SECRET,
+        'fb_exchange_token': short_live_user_token
+    }
+    response = requests.get(url, params=params)
+    long_live_user_token = response.json().get('access_token',[])
+    session['long_live_user_token'] = long_live_user_token
+    return long_live_user_token
+@app.route('/test')
+def test():
+    url = f'https://graph.facebook.com/v19.0/me/accounts'
+    params = {
+        'access_token': session['long_live_user_token']
+    }
+    response = requests.get(url, params = params)
+    page_long_live_token = response.json().get('data',[])[0].get('access_token')
+    session['page_long_live_token'] = page_long_live_token
+    return session.get('page_long_live_token')#page_long_live_token
 @app.route('/data')
 def data():
-    return f'Hello, {session['page_data']}, welcome back'
+    return session.get('page_long_live_token')
 @app.route('/page')
-def page_data():
-    page_id = session['page_data'][0]['id']
-    page_access_token = session['page_data'][0]['access_token']]
-    metrics = 'page_impressions'
+def page():
+    page_id = session['page_data']['id']
+    page_access_token = session['page_long_live_token']#session['page_data']['access_token']
+    start_date_str = '14/03/2024'
+    end_date_str = '14/04/2024'
+    start_date_object = datetime.strptime(start_date_str, '%d/%m/%Y')
+    start_date_object = datetime.strptime(end_date_str, '%d/%m/%Y')
+
+    # Convert datetime object to UNIX timestamp
+    start_date = int(time.mktime(start_date_object.timetuple()))
+    end_date = int(time.mktime(start_date_object.timetuple()))
+    metrics = 'page_impressions,page_post_engagements,page_views_total,page_fans'
     url = f'https://graph.facebook.com/v19.0/{page_id}/insights'
     params = {
-        'metrics':metrics,
+        'pretty':0,
+        'metric':metrics,
+        'period':'day',
+        'since': start_date,
+        'until': end_date,
         'access_token':page_access_token
     }
     response = requests.get(url,params=params)
@@ -62,5 +103,32 @@ def page_data():
     return insights_data
     # return page_access_token
     #https://www.facebook.com/v19.0/dialog/oauth?response_type=token&display=popup&client_id=1476099873250266&redirect_uri=https%3A%2F%2Fdevelopers.facebook.com%2Ftools%2Fexplorer%2Fcallback%3Fmethod%3DGET%26path%3Dme%252Faccounts%253Ffields%253Dpage_token%26version%3Dv19.0&auth_type=rerequest&scope=email%2Cpages_manage_cta%2Cpages_show_list%2Cads_read%2Cpages_messaging%2Cpages_read_engagement%2Cpages_manage_metadata%2Cpages_read_user_content%2Cpages_manage_ads%2Cpages_manage_posts%2Cpages_manage_engagement
+
+
+@app.route('/get_page_engagements', methods=['POST'] )
+def get_page_engagements():
+    page_id = '265201166672768'#session['page_data']['id']
+    page_access_token = session.get('page_long_live_token')
+    data = request.json
+    start_date_str = data.get('start_date') 
+    end_date_str = data.get('end_date') 
+    start_date_object = datetime.strptime(start_date_str, '%d/%m/%Y')
+    start_date_object = datetime.strptime(end_date_str, '%d/%m/%Y')
+    # Convert datetime object to UNIX timestamp
+    start_date = int(time.mktime(start_date_object.timetuple()))
+    end_date = int(time.mktime(start_date_object.timetuple()))
+    metrics = 'page_impressions,page_post_engagements,page_views_total,page_fans'
+    url = f'https://graph.facebook.com/v19.0/{page_id}/insights'
+    params = {
+        'pretty':0,
+        'metric':metrics,
+        'period':'day',
+        'since': start_date,
+        'until': end_date,
+        'access_token':page_access_token
+    }
+    response = requests.get(url,params=params)
+    insights_data = response.json()
+    return page_access_token
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run('localhost', 5000,debug=True)
