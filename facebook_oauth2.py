@@ -50,7 +50,7 @@ def get_data(sql):
     return list(rows)
 ##########################################
 #Check for validation
-##If logged in redirect token validation
+##If logged in redirect token validationl
 ##Else go to login endpoint
 
 @app.route('/')
@@ -65,10 +65,17 @@ def convert_date(unix_timestamp):
     # Convert Unix timestamp to datetime object in UTC
     dt_object = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
     # Format datetime object as a string 'ddmmyy'
-    date_string = dt_object.strftime('%d%m%y')
+    date_string = dt_object.strftime('%Y-%m-%d')
     return date_string
 @app.route('/token_validate')
 def token_validate():
+    expired_date = datetime.strptime(session['token_expired_date'] , '%Y-%m-%d').date()
+    today = datetime.now().date()
+    if expired_date <= today:
+        return redirect('/login')
+    else:
+        return redirect('/done')
+def get_token_expired_date():
     long_live_user_token = session['long_live_user_token']
     url = 'https://graph.facebook.com/v19.0/debug_token'
     params = {
@@ -78,8 +85,9 @@ def token_validate():
     response = requests.get(url, params=params)    
     data_access_expires_at =  response.json().get('data',[])["data_access_expires_at"]
     date_string  =convert_date(data_access_expires_at)
-    return {"exprided_date":date_string}
-   
+    session['token_expired_date'] = date_string
+    # session['a'] = 1
+    # return date_string
 @app.route('/login')
 def home_page():
     # https://www.facebook.com/dialog/oauth?client_id=1476099873250266&redirect_uri=http://localhost:5000/callback&scope=pages_show_list,pages_read_engagement,read_insights&response_type=code
@@ -123,7 +131,7 @@ def extend_token():
     session['long_live_user_token'] = long_live_user_token
     me_url = f'https://graph.facebook.com/v19.0/me/accounts?access_token={long_live_user_token}'
     user_data = requests.get(me_url).json()
-    session['page_data'] = user_data['data'][0]
+    session['page_data'] = user_data['data']#[0]
     return redirect(url_for("get_user_info"))
 #######################################################
 ############Get user name and id#######################
@@ -139,6 +147,7 @@ def get_user_info():
     user_id = response.json().get('id',[])
     session['user_name'] = user_name
     session['user_id']= user_id
+    get_token_expired_date()
     return redirect(url_for("save_user_info"))
 @app.route('/save_user_info')
 def save_user_info():
@@ -147,10 +156,10 @@ def save_user_info():
     # Create a cursor object
         with conn.cursor() as cursor:
             # SQL INSERT statement
-            sql = "INSERT INTO `db_fb_user` (`user_id`, `user_name`, `short_live_user_token`, `long_live_user_token`) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `user_id` = VALUES(`user_id`),`user_name` = VALUES(`user_name`),`short_live_user_token` = VALUES(`short_live_user_token`),`long_live_user_token` = VALUES(`long_live_user_token`) "
+            sql = "INSERT INTO `db_fb_user` (`user_id`, `user_name`, `short_live_user_token`, `long_live_user_token`,`token_expired_date`) VALUES (%s, %s, %s, %s, %s) ON DUPLICATE KEY UPDATE `user_id` = VALUES(`user_id`),`user_name` = VALUES(`user_name`),`short_live_user_token` = VALUES(`short_live_user_token`),`long_live_user_token` = VALUES(`long_live_user_token`),`token_expired_date` = VALUES(`token_expired_date`) "
             
             # Values to insert
-            values = (session['user_id'], session['user_name'], session['user_access_token'],session['long_live_user_token'])
+            values = (session['user_id'], session['user_name'], session['user_access_token'],session['long_live_user_token'],session['token_expired_date'])
             
             # Execute the SQL statement
             cursor.execute(sql, values)
@@ -166,10 +175,54 @@ def save_user_info():
     finally:
         # Close the connection
         conn.close()
-    return redirect(url_for("done"))
+    return redirect(url_for("save_page_info"))
 @app.route('/done')
 def done():
-    return "your data is fucking stolen"
+    # token_validate()
+    return "Your data is fucking stolen!!!!"
+@app.route('/save_page_info')
+def save_page_info():
+    conn = pymysql.connect(host=host, user = user, password= password, database = database, port=port)
+    try:
+    # Create a cursor object
+        with conn.cursor() as cursor:
+            for i in session['page_data']:
+                page_id = i['id']
+                page_name = i['name']
+                long_live_page_token =i['access_token']
+                owner_id = session['user_id']
+                # SQL INSERT statement
+                sql = "INSERT INTO `db_fb_page` (`page_id`, `page_name`,`long_live_page_token`,`owner_id`) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `page_id` = VALUES(`page_id`),`page_name` = VALUES(`page_name`),`long_live_page_token` = VALUES(`long_live_page_token`),`owner_id` = VALUES(`owner_id`)"
+                
+                # Values to insert
+                values = (page_id, page_name, long_live_page_token,owner_id)
+                
+                # Execute the SQL statement
+                cursor.execute(sql, values)
+                
+                # Commit the transaction
+                conn.commit()
+                
+                print("Values inserted successfully.")
+            
+    except pymysql.MySQLError as e:
+        print(f"Error: {e}")
+        
+    finally:
+        # Close the connection
+        conn.close()
+    return redirect(url_for("done"))
+    # return [page_id, page_name, long_live_page_token,owner_id]
+#####################################################################
+###############Endpoint for visitor to get their metrics after Oauth2
+
+
+
+
+
+########################################
+##Done with authorization and save data to the database
+##The following endpoints will only focus on get data from page base on tokens saved in out database
 
 @app.route('/test')
 def test():
@@ -180,17 +233,17 @@ def test():
     response = requests.get(url, params = params)
     page_long_live_token = response.json().get('data',[])[0].get('access_token')
     session['page_long_live_token'] = page_long_live_token
-    return session.get('page_long_live_token')#page_long_live_token
+    return session.get('page_data')#page_long_live_token
 @app.route('/data')
 def data():
     return session.get('page_data')
 
 @app.route('/page')
 def page():
-    page_id = session['page_data']['id']
+    page_id = session['page_data'][0]['id']
     page_access_token = session['page_long_live_token']#session['page_data']['access_token']
     start_date_str = '14/03/2024'
-    end_date_str = '14/04/2024'
+    end_date_str = '14/03/2024'
     start_date_object = datetime.strptime(start_date_str, '%d/%m/%Y')
     start_date_object = datetime.strptime(end_date_str, '%d/%m/%Y')
 
@@ -210,18 +263,17 @@ def page():
     response = requests.get(url,params=params)
     insights_data = response.json()
     return insights_data
-@app.route('/page_fetch')
-def page_fetch():
+@app.route('/get_page_data', methods = ['POST'])
+def get_page_data():
     sql = "SELECT * FROM `db_fb_page` LIMIT 10;"
     rows = get_data(sql)
-    return rows
-@app.route('/get_page_engagements', methods=['POST'] )
-def get_page_engagements():
-    page_id = '265201166672768'#session['page_data']['id']
-    page_access_token = session.get('page_long_live_token',[])
+    page_id = rows[0][0]
+    page_access_token = rows[0][2]
+    # page_name = rows[0][1]
     data = request.json
     start_date_str = data.get('start_date') 
     end_date_str = data.get('end_date') 
+
     start_date_object = datetime.strptime(start_date_str, '%d/%m/%Y')
     start_date_object = datetime.strptime(end_date_str, '%d/%m/%Y')
     # Convert datetime object to UNIX timestamp
@@ -239,6 +291,6 @@ def get_page_engagements():
     }
     response = requests.get(url,params=params)
     insights_data = response.json()
-    return page_access_token
+    return insights_data['data']
 if __name__ == '__main__':
     app.run('localhost', 5000,debug=True)

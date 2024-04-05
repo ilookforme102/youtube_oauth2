@@ -10,9 +10,14 @@ app.secret_key = 'f33924fea4dd7123a0daa9d2a7213679'  # Needed for session tracki
 
 # Google OAuth 2.0 Client ID and Secret
 CLIENT_SECRETS_FILE = "cred3.json"
-SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
+SCOPES = [
+    'https://www.googleapis.com/auth/youtube.readonly',  # To access YouTube channel data
+    'https://www.googleapis.com/auth/userinfo.email',    # To access the user's email address
+    'https://www.googleapis.com/auth/userinfo.profile'   # To access the user's profile information, including ID
+]
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # ONLY for development
-
+os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
+channel_ids = []
 @app.route('/')
 def index():
     # Check if the user is authenticated
@@ -36,7 +41,7 @@ def authorize():
     # authorization_url is url to redirect to from /authorize
     authorization_url, state = flow.authorization_url(
         access_type='offline',
-        include_granted_scopes='true')
+        include_granted_scopes='true', prompt = 'consent')
 
     # Store the state in the session so you can verify the callback
     session['state'] = state
@@ -62,8 +67,56 @@ def oauth2callback():
     print(f"Refresh Token: {credentials.refresh_token}")
 
     return 'Authorization complete. Check the console for the refresh token.'
+def session_to_credentials(session_credentials):
+    from google.oauth2.credentials import Credentials
+    
+    return Credentials(
+        token=session_credentials['token'],
+        refresh_token=session_credentials['refresh_token'],
+        token_uri=session_credentials['token_uri'],
+        client_id=session_credentials['client_id'],
+        client_secret=session_credentials['client_secret'],
+        scopes=session_credentials['scopes'])
+@app.route('/list_channels')
+def list_channels():
+    if 'credentials' not in session:
+        return redirect('authorize')
+    
+    credentials = session_to_credentials(session['credentials'])
+    #Get user id and email
+    oauth2_service = build('oauth2', 'v2', credentials=credentials)
+
+    # Get user information
+    user_info = oauth2_service.userinfo().get().execute()
+
+    user_id = user_info.get('id')
+    user_email = user_info.get('email')
+        
+    #get channel id
+    youtube = build('youtube', 'v3', credentials=credentials)
+    request = youtube.channels().list(
+        part='id,snippet,contentDetails,statistics',
+        mine=True
+    )
+    response = request.execute()
+
+    channels = []
+    for item in response.get('items', []):
+        channels.append({
+            'name': item['snippet']['title'],
+            'id': item['id'],
+            'user_id':user_id,
+            'user_email':user_email
+            
+        })
+        if item['id'] not in channel_ids:
+            channel_ids.append(item['id'])
+    # return jsonify(channels)
+    session['channel_data'] = channels
+    return session['channel_data']
 @app.route('/fetch_youtube_metrics')
 def fetch_youtube_metrics():
+    channel_id = session['channel_data'][0]['id']
     if 'credentials' not in session:
         return redirect('authorize')
 
@@ -79,7 +132,7 @@ def fetch_youtube_metrics():
 
     # Fetch YouTube Analytics data
     response = youtubeAnalytics.reports().query(
-        ids='channel==MINE',
+        ids=f'channel=={channel_id}',
         startDate=start_date,
         endDate=end_date,
         metrics='estimatedMinutesWatched,views,likes,subscribersGained',

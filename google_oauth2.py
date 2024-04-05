@@ -3,102 +3,15 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import datetime
-import flask
 import os
 
-# app = Flask(__name__)
-# app.secret_key = 'f33924fea4dd7123a0daa9d2a7213679'  # Replace with your secret key
-# os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # ONLY for development on localhost without SSL
-
-# # OAuth 2.0 Setup
-# SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
-# CLIENT_SECRETS_FILE = 'cred3.json'
-
-# flow = Flow.from_client_secrets_file(
-#     client_secrets_file=CLIENT_SECRETS_FILE,
-#     scopes=SCOPES,
-#     redirect_uri='http://localhost:5000/oauth2callback'
-# )
-
-# @app.route('/')
-# def index():
-#     authorization_url, state = flow.authorization_url(
-#         access_type='offline',
-#         include_granted_scopes='true',
-#         prompt='consent')
-    
-#     session['state'] = state
-#     return f'<a href="{authorization_url}">Authorize</a>'
-
-# @app.route('/oauth2callback')
-# def oauth2callback():
-#     flow.fetch_token(authorization_response=request.url)
-    
-#     credentials = flow.credentials
-#     session['credentials'] = {
-#         'token': credentials.token,
-#         'refresh_token': credentials.refresh_token,
-#         'token_uri': credentials.token_uri,
-#         'client_id': credentials.client_id,
-#         'client_secret': credentials.client_secret,
-#         'scopes': credentials.scopes
-#     }
-    
-#     return redirect(url_for('search_channels'))
-
-# @app.route('/search_channels')
-# # def search_channels():
-# #     if 'credentials' not in session:
-# #         return redirect('authorize')
-    
-# #     credentials = flow.credentials_from_dict(session['credentials'])
-    
-# #     youtube = build('youtube', 'v3', credentials=credentials)
-
-# #     # Example: Search for channels by name
-# #     query_term = "Google Developers"
-# #     response = youtube.search().list(part="id,snippet", q=query_term, type="channel", maxResults=25).execute()
-
-# #     channels = '<br>'.join([f"Channel Name: {item['snippet']['title']}, Channel ID: {item['id']['channelId']}" for item in response.get("items", [])])
-    
-# #     return f'<p>{channels}</p>'
-# def search_channels():
-#     if 'credentials' not in session:
-#         return redirect(url_for('index'))
-
-#     # Reconstruct the credentials object from the session
-#     creds_data = session['credentials']
-#     credentials = Credentials(
-#         token=creds_data['token'],
-#         refresh_token=creds_data['refresh_token'],
-#         token_uri=creds_data['token_uri'],
-#         client_id=creds_data['client_id'],
-#         client_secret=creds_data['client_secret'],
-#         scopes=creds_data['scopes']
-#     )
-
-#     youtube = build('youtube', 'v3', credentials=credentials)
-
-#     # Example: search for channels by name
-#     query_term = "Google Developers"
-#     response = youtube.search().list(
-#         part="id,snippet",
-#         q=query_term,
-#         type="channel",
-#         maxResults=25
-#     ).execute()
-#     print(response)
-#     # Process and display the response
-#     # ...
-#     return 'Search Completed'
-# if __name__ == '__main__':
-#     app.run('localhost', 5000, debug=True)
 app = Flask(__name__)
 app.secret_key = 'f33924fea4dd7123a0daa9d2a7213679'  # Replace with a strong secret key
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Only for testing on localhost without HTTPS
 
 # Google OAuth 2.0 Setup
 SCOPES = ['https://www.googleapis.com/auth/youtube.readonly']
+session.clear()
 CLIENT_SECRETS_FILE = 'cred3.json'
 channel_ids = []
 @app.route('/')
