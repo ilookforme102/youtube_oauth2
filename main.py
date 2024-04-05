@@ -114,6 +114,9 @@ def list_channels():
     # return jsonify(channels)
     session['channel_data'] = channels
     return session['channel_data']
+@app.route('/test')
+def test():
+    return session['credentials']
 @app.route('/fetch_youtube_metrics')
 def fetch_youtube_metrics():
     channel_id = session['channel_data'][0]['id']
