@@ -56,7 +56,6 @@ def authorize():
     session['state'] = state
     # At this url, server will redicrect user to Google's OAuth 2.0 server
     return redirect(authorization_url)
- 
 @app.route('/oauth2callback')
 def oauth2callback():
     # Specify the state when creating the flow in the callback to verify the authorization server response
@@ -72,27 +71,36 @@ def oauth2callback():
     #At this point flow.credentials only have value of access token and refresh token under flow.credentials.token
     # and flow.credentials.refresh_token
     credentials = flow.credentials
+    #Convert credentials into a python dictionary 
+    #as same datatype of session object
     session['credentials'] = credentials_to_dict(credentials)
 
     # Print out the refresh token
     print(f"Refresh Token: {credentials.refresh_token}")
 
     return 'Authorization complete. Check the console for the refresh token.'
+@app.route('/fb_get_user_info')
+def fb_get_user_info():
+    refresh_token = session['credentials']['refresh_token']
+    client_id = session['credentitals']['client_id']
+    client_secret = session['credentitals']['client_secret']
+    client_id = session['credentitals']['client_id']
 ##################################################
 ## Save all key, value pairs in Session credentials to the Credentials object
-def session_to_credentials(session_credentials):
+## Reverse the session object back to the Credentials
+def session_to_credentials(session):
     return Credentials(
-        token=session_credentials['token'],
-        refresh_token=session_credentials['refresh_token'],
-        token_uri=session_credentials['token_uri'],
-        client_id=session_credentials['client_id'],
-        client_secret=session_credentials['client_secret'],
-        scopes=session_credentials['scopes'])
+        token=session['token'],
+        refresh_token=session['refresh_token'],
+        token_uri=session['token_uri'],
+        client_id=session['client_id'],
+        client_secret=session['client_secret'],
+        client_secret=session['scopes'])
 @app.route('/list_channels')
 def list_channels():
     if 'credentials' not in session:
         return redirect('authorize')
-    
+    #Create Credentials from session key value
     credentials = session_to_credentials(session['credentials'])
     #Get user id and email
     oauth2_service = build('oauth2', 'v2', credentials=credentials)
@@ -146,7 +154,7 @@ def get_access_token():
     return response_data.get('access_token')
 @app.route('/test')
 def test():
-    return session['credentials']
+    return session['refresh_token']
 @app.route('/fetch_youtube_metrics')
 def fetch_youtube_metrics():
     channel_id = session['channel_data'][0]['id']
