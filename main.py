@@ -20,6 +20,7 @@ os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
 channel_ids = []
 def credentials_to_dict(credentials):
     return {
+        #token AKA acess token
         'token': credentials.token,
         'refresh_token': credentials.refresh_token,
         'token_uri': credentials.token_uri,
