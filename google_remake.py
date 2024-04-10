@@ -19,26 +19,28 @@ def get_data(sql):
             user='sql_dabanhtructi', 
             password='FKb75AYJzFMJET8F', 
             database='sql_dabanhtructi',
-            #connect_timeout=30000,
             port = 3306)
     cursor = conn.cursor()
     try:
         cursor.execute(sql)
+         # Fetch all the rows in a list of lists.
+        rows = cursor.fetchall()
+        return list(rows)
     except pymysql.OperationalError as e:
-            if e.args[0] in (2006,2003, 2013):
-                print("Lost connection, attempting to reconnect...")
-                conn.ping(reconnect=True)
-                cursor.execute(sql)
-            else:
-                print("An error occurred:", e)
-                conn.rollback()
+        if e.args[0] in (2006,2003, 2013):
+            print("Lost connection, attempting to reconnect...")
+            conn.ping(reconnect=True)
+            cursor.execute(sql)
+            rows = cursor.fetchall()
+            return list(rows)
+        else:
+            print("An error occurred:", e)
+            conn.rollback()
     except Exception as e:
         print(e)
         conn.rollback()
-
-    # Fetch all the rows in a list of lists.
-    rows = cursor.fetchall()
-    return list(rows)
+    finally:
+        conn.close()
 ############################
 app = Flask(__name__)
 app.secret_key = 'f33924fea4dd7123a0daa9d2a7213679'  # Needed for session tracking
@@ -87,6 +89,7 @@ def authorize():
     #redirected. This URL directs the user to Google's OAuth 2.0 server, 
     #where they can authorize your application to access their Google data 
     #according to the scopes you've requested.
+    session.clear()
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
@@ -188,8 +191,8 @@ def gg_save_user_info():
     finally:
         # Close the connection
         conn.close()
-    return "Your data is fucking stolen!!"
-    # return redirect('/gg_save_page_info')
+    # return "Your data is fucking stolen!!"
+    return redirect('/gg_save_page_info')
 @app.route('/gg_save_page_info')
 def gg_save_page_info():
     if 'credentials' not in session:
@@ -244,16 +247,24 @@ def load_client_credentials(json_filepath):
     token_uri = data['web']['token_uri']
     return client_id, client_secret, token_uri
 
-# Example usage
-json_filepath = 'cred3.json'
-client_id, client_secret, token_uri = load_client_credentials(json_filepath)
+# Fixed variables
+client_id, client_secret, token_uri = load_client_credentials(CLIENT_SECRETS_FILE)
+#####################################################################
+##write some functions to extract parameters from specigfic channel
+##endpoints create here only for testing purpose
+######################################################################
 #get refresh token
 def get_refresh_token(channel_name):
-    sql = 'SELECT c.channel_id, u.refresh_token FROM `db_gg_channel` as c INNER JOIN `db_gg_user` u ON c.owner_id = u.user_id WHERE channel_name = {channel_name};'
+    sql = '''SELECT c.channel_id, u.refresh_token 
+    FROM `db_gg_channel` as c 
+    INNER JOIN `db_gg_user` u 
+    ON c.owner_id = u.user_id 
+    WHERE channel_name = "{channel_name}";'''.format(channel_name = channel_name)
     rows = get_data(sql)
     refresh_token = rows[0][1]
-    return refresh_token
-refresh_token = get_refresh_token("Shang Uchiha")
+    channel_id = rows[0][0]
+    return refresh_token,channel_id
+refresh_token,channel_id = get_refresh_token("Shang Uchiha")
 def access_token_generate(refresh_token):
     request_url = 'https://oauth2.googleapis.com/token'
     request_data = {
@@ -266,39 +277,110 @@ def access_token_generate(refresh_token):
     response_data = response.json()
     return response_data.get('access_token')
 temp_access_token = access_token_generate(refresh_token)
-@app.route('/test')
-def test():
-    conn = pymysql.connect(host=host,user=user, password=password, database=database,port=port)
-    try:
-    # Create a cursor object
-        with conn.cursor() as cursor:
-            # SQL INSERT statement
-            sql = "SELECT * FROM `db_gg_channel` as c INNER JOIN `db_gg_user` u ON c.owner_id = u.user_id WHERE channel_name = %s;"
-            
-            
-            # Execute the SQL statement
-            cursor.execute(sql, ('Shang Uchiha',))
-            
-            # Commit the transaction
-            conn.commit()
-            
-            print("Values inserted successfully.")
-            
-    except pymysql.MySQLError as e:
-        print(f"Error: {e}")
-        
-    finally:
-        # Close the connection
-        conn.close()
-    rows = cursor.fetchall()
-    return list(rows)
-#SELECT * FROM `db_gg_channel` as c INNER JOIN `db_gg_user` u ON c.owner_id = u.user_id WHERE channel_name = "Shang Uchiha";
+#Create Credentials object
+def credentials_generate(access_token, refresh_token,token_uri,client_id,client_secret):
+    return Credentials(
+        token=access_token,
+        refresh_token=refresh_token,
+        token_uri=token_uri,
+        client_id=client_id,
+        client_secret=client_secret,
+        scopes=SCOPES)
+@app.route('/list_channels')
+def list_channels():
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    oauth2_service = build('oauth2', 'v2', credentials=credentials)
 
-# @app.route('/get_channel_insights')
-# def get_channel_insights():
-#     sql = "SELECT * FROM `db_gg_channel`"
-#     rows = get_data(sql)
-#     channel_id = rows[0][0]
-#     return rows
+    # Get user information
+    user_info = oauth2_service.userinfo().get().execute()
+
+    user_id = user_info.get('id')
+    user_email = user_info.get('email')
+        
+    #get channel id
+    youtube = build('youtube', 'v3', credentials=credentials)
+    request = youtube.channels().list(
+        part='id,snippet,contentDetails,statistics',
+        mine=True
+    )
+    response = request.execute()
+
+    channels = []
+    for item in response.get('items', []):
+        channels.append({
+            'name': item['snippet']['title'],
+            'id': item['id'],
+            'user_id':user_id,
+            'user_email':user_email
+            
+        })
+        
+    return jsonify(channels)
+#test a get method to return insights metrics 
+#for a specific channel   
+@app.route('/get_channel_metrics')
+def get_channel_metrics():
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    # Build the YouTube Analytics service object
+    youtubeAnalytics = build('youtubeAnalytics', 'v2', credentials=credentials)
+    # Define the date range for the last 30 days
+    end_date = datetime.date.today().isoformat()
+    start_date = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+
+    # Fetch YouTube Analytics data
+    response = youtubeAnalytics.reports().query(
+        ids=f'channel=={channel_id}',
+        startDate=start_date,
+        endDate=end_date,
+        metrics='estimatedMinutesWatched,views,likes,subscribersGained',
+        dimensions='day',
+        sort = 'day'
+    ).execute()
+    return jsonify(response)
+###########################################################
+#########POST METHOD:
+#########Get the channel as parameter and returns time serries data about
+#########channel insights
+#########Postman test - Body -Raw :  {"channel_name":"Shang Uchiha"}
+@app.route('/insights', methods = ['POST'])
+def insights():
+    data = request.json
+    channel_name = data.get('channel_name')
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    youtubeAnalytics = build('youtubeAnalytics', 'v2', credentials=credentials)
+    # Define the date range for the last 30 days
+    # end_date = datetime.date.today().isoformat()
+    # start_date = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+    # Date format: yyyy-mm-dd
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    # Fetch YouTube Analytics data
+    response = youtubeAnalytics.reports().query(
+        ids=f'channel=={channel_id}',
+        startDate=start_date,
+        endDate=end_date,
+        metrics='estimatedMinutesWatched,views,likes,subscribersGained',
+        dimensions='day',
+        sort = 'day'
+    ).execute()
+    return jsonify(response)
+@app.route('/test')
+def test(): 
+    end_date = datetime.date.today().isoformat()
+
+#SELECT * FROM `db_gg_channel` as c INNER JOIN `db_gg_user` u ON c.owner_id = u.user_id WHERE channel_name = "Shang Uchiha";
+    return end_date
+@app.route('/get_channel_insights')
+def get_channel_insights():
+    channel_name = "Shang Uchiha"
+    sql = '''SELECT c.channel_id, u.refresh_token FROM `db_gg_channel` as c 
+            INNER JOIN `db_gg_user` u 
+            ON c.owner_id = u.user_id 
+            WHERE channel_name = "{channel_name}";'''.format(channel_name= channel_name)
+    rows = get_data(sql)
+    channel_id = rows[0][0]
+    return rows
 if __name__ == '__main__':
     app.run('localhost', 5000, debug=True)

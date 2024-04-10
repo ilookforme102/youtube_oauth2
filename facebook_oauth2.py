@@ -34,13 +34,13 @@ def get_data(sql):
     try:
         cursor.execute(sql)
     except pymysql.OperationalError as e:
-            if e.args[0] in (2006,2003, 2013):
-                print("Lost connection, attempting to reconnect...")
-                conn.ping(reconnect=True)
-                cursor.execute(sql)
-            else:
-                print("An error occurred:", e)
-                conn.rollback()
+        if e.args[0] in (2006,2003, 2013):
+            print("Lost connection, attempting to reconnect...")
+            conn.ping(reconnect=True)
+            cursor.execute(sql)
+        else:
+            print("An error occurred:", e)
+            conn.rollback()
     except Exception as e:
         print(e)
         conn.rollback()
