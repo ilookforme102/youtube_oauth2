@@ -293,4 +293,4 @@ def get_page_data():
     insights_data = response.json()
     return insights_data['data']
 if __name__ == '__main__':
-    app.run('localhost', 5000,debug=True)
+    app.run('localhost', 3000,debug=True)

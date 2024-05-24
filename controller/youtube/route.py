@@ -1,15 +1,18 @@
+from flask import Flask, jsonify, request, session, make_response,redirect, url_for,Blueprint
+yt_bp = Blueprint('yt_bp', __name__, url_prefix='/youtube')
 from flask import Flask, redirect, request, session, url_for, jsonify
 from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
+from model.db_schema import app, db, User, GoogleAccount, YoutubeChannel, FacebookAccount, FacebookPage
 import datetime
 import json
 import os
 import requests
 import pymysql
 ########MySQL###############
-host='23.226.8.83'
-user='root'
+host='128.199.228.235'
+user='sql_dabanhtructi'
 password='FKb75AYJzFMJET8F'
 database='sql_dabanhtructi'
 port = 3306
@@ -41,7 +44,14 @@ def get_data(sql):
         conn.rollback()
     finally:
         conn.close()
-############################
+##############################################
+# {"web":{"client_id":"236896140259-jte4kc2hfp0cfki0qi00bjkmscj9k92r.apps.googleusercontent.com",
+#         "project_id":"digichrom-1698819902733",
+#         "auth_uri":"https://accounts.google.com/o/oauth2/auth",
+#         "token_uri":"https://oauth2.googleapis.com/token",
+#         "auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs",
+#         "client_secret":"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",
+#     "redirect_uris":["http://localhost:3000/youtube/oauth2callback"]}}
 app = Flask(__name__)
 app.secret_key = 'f33924fea4dd7123a0daa9d2a7213679'  # Needed for session tracking
 channel_ids = []
@@ -74,15 +84,15 @@ def session_to_credentials(session):
         client_id=session['client_id'],
         client_secret=session['client_secret'],
         scopes=session['scopes'])
-@app.route('/')
+@yt_bp.route('/')
 def index():
     # Check if the user is authenticated
     if 'credentials' not in session:
-        return '<a href="/authorize">Authorize Access to YouTube</a>'
+        return '<a href="/youtube/authorize">Authorize Access to YouTube</a>'
     # User is authenticated, proceed with API calls
     return redirect("/fetch_youtube_metrics")
 
-@app.route('/authorize')
+@yt_bp.route('/authorize')
 def authorize():
     # Create a flow instance to manage the OAuth 2.0 Authorization Grant Flow steps
     #The flow object is used to generate an authorization URL to which the user will be 
@@ -94,7 +104,7 @@ def authorize():
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
         #Declare the url to redirect to after authorize my application to access their Google data
-        redirect_uri=url_for('oauth2callback', _external=True))
+        redirect_uri=url_for('yt_bp.oauth2callback', _external=True))
     # authorization_url is url to redirect to from /authorize
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -104,14 +114,15 @@ def authorize():
     session['state'] = state
     # At this url, server will redicrect user to Google's OAuth 2.0 server
     return redirect(authorization_url)
-@app.route('/oauth2callback')
+    # oauth2callback()
+@yt_bp.route('/oauth2callback')
 def oauth2callback():
     # Specify the state when creating the flow in the callback to verify the authorization server response
     state = session['state']
 
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE, scopes=SCOPES, state=state,
-        redirect_uri=url_for('oauth2callback', _external=True))
+        redirect_uri=url_for('yt_bp.oauth2callback', _external=True))
 
     authorization_response = request.url
     # Fet_token method is being used to exchange client secret with refresh token
@@ -124,14 +135,14 @@ def oauth2callback():
     session['credentials'] = credentials_to_dict(credentials)
 
     # Print out the refresh token
-    print(f"Refresh Token: {credentials.refresh_token}")
+    # print(f"Refresh Token: {credentials.refresh_token}")
     # return credentials_to_dict(credentials)
-    return 'Authorization complete. Check the console for the refresh token.'
+    return jsonify(session['credentials'])#redirect("https://5goal.club/tin-the-thao/esports")#'Authorization complete. Check the console for the refresh token.'
 # The reason to get access token is that it  only valid for a couple minutes 
 # so everytime we want to get data from user, we have to use refresh token to get the access token
 # Request new access token at https://oauth2.googleapis.com/token
 
-@app.route('/get_access_token')
+@yt_bp.route('/get_access_token')
 def get_access_token():
     current_credentitals = session['credentials']
     refresh_token = current_credentitals['refresh_token']
@@ -150,7 +161,7 @@ def get_access_token():
     session['credentials']['token']=  new_access_token
     return new_access_token
 
-@app.route('/gg_save_user_info')
+@yt_bp.route('/gg_save_user_info', methods = ['GET','OPTIONS'])
 def gg_save_user_info():
     if 'credentials' not in session:
         return redirect('authorize')
@@ -167,33 +178,34 @@ def gg_save_user_info():
     user_name = user_info.get('name')
     # session['user_name']= user_name
     refresh_token =  session['credentials']['refresh_token']
-    conn = pymysql.connect(host=host,user=user, password=password, database=database,port=port)
-    try:
-    # Create a cursor object
-        with conn.cursor() as cursor:
-            # SQL INSERT statement
-            sql = "INSERT INTO `db_gg_user` (`user_id`, `user_name`, `user_email`, `refresh_token`) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `user_id` = VALUES(`user_id`),`user_name` = VALUES(`user_name`),`user_email` = VALUES(`user_email`),`refresh_token` = VALUES(`refresh_token`)"
+    # if Goo
+    # conn = pymysql.connect(host=host,user=user, password=password, database=database,port=port)
+    # try:
+    # # Create a cursor object
+    #     with conn.cursor() as cursor:
+    #         # SQL INSERT statement
+    #         sql = "INSERT INTO `db_gg_user` (`user_id`, `user_name`, `user_email`, `refresh_token`) VALUES (%s, %s, %s, %s) ON DUPLICATE KEY UPDATE `user_id` = VALUES(`user_id`),`user_name` = VALUES(`user_name`),`user_email` = VALUES(`user_email`),`refresh_token` = VALUES(`refresh_token`)"
             
-            # Values to insert
-            values = (user_id, user_name, user_email,refresh_token)
+    #         # Values to insert
+    #         values = (user_id, user_name, user_email,refresh_token)
             
-            # Execute the SQL statement
-            cursor.execute(sql, values)
+    #         # Execute the SQL statement
+    #         cursor.execute(sql, values)
             
-            # Commit the transaction
-            conn.commit()
+    #         # Commit the transaction
+    #         conn.commit()
             
-            print("Values inserted successfully.")
+    #         print("Values inserted successfully.")
             
-    except pymysql.MySQLError as e:
-        print(f"Error: {e}")
+    # except pymysql.MySQLError as e:
+    #     print(f"Error: {e}")
         
-    finally:
-        # Close the connection
-        conn.close()
+    # finally:
+    #     # Close the connection
+    #     conn.close()
     # return "Your data is fucking stolen!!"
-    return redirect('/gg_save_page_info')
-@app.route('/gg_save_page_info')
+    # return redirect('/gg_save_page_info')
+@yt_bp.route('/gg_save_page_info')
 def gg_save_page_info():
     if 'credentials' not in session:
         return redirect('authorize')
@@ -286,7 +298,7 @@ def credentials_generate(access_token, refresh_token,token_uri,client_id,client_
         client_id=client_id,
         client_secret=client_secret,
         scopes=SCOPES)
-@app.route('/list_channels')
+@yt_bp.route('/list_channels')
 def list_channels():
     credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
     oauth2_service = build('oauth2', 'v2', credentials=credentials)
@@ -318,7 +330,7 @@ def list_channels():
     return jsonify(channels)
 #test a get method to return insights metrics 
 #for a specific channel   
-@app.route('/get_channel_metrics')
+@yt_bp.route('/get_channel_metrics')
 def get_channel_metrics():
     credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
     # Build the YouTube Analytics service object
@@ -342,7 +354,7 @@ def get_channel_metrics():
 #########Get the channel as parameter and returns time serries data about
 #########channel insights, you can find all the neccessary metrics from meta API website
 #########Postman test - Body -Raw :  {"channel_name":"Shang Uchiha"}
-@app.route('/insights', methods = ['POST'])
+@yt_bp.route('/insights', methods = ['POST'])
 def insights():
     data = request.json
     channel_name = data.get('channel_name')
@@ -366,13 +378,13 @@ def insights():
         sort = 'day'
     ).execute()
     return jsonify(response)
-@app.route('/test')
+@yt_bp.route('/test')
 def test(): 
     end_date = datetime.date.today().isoformat()
 
 #SELECT * FROM `db_gg_channel` as c INNER JOIN `db_gg_user` u ON c.owner_id = u.user_id WHERE channel_name = "Shang Uchiha";
     return end_date
-@app.route('/get_channel_insights')
+@yt_bp.route('/get_channel_insights')
 def get_channel_insights():
     channel_name = "Shang Uchiha"
     sql = '''SELECT c.channel_id, u.refresh_token FROM `db_gg_channel` as c 
@@ -382,5 +394,5 @@ def get_channel_insights():
     rows = get_data(sql)
     channel_id = rows[0][0]
     return rows
-if __name__ == '__main__':
-    app.run('localhost', port= 3000, debug=True)
+# if __name__ == '__main__':
+#     app.run('localhost', port= 3000, debug=True)
