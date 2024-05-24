@@ -99,7 +99,7 @@ def authorize():
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true', prompt = 'consent')
-    authorization_url.replace("http://127.0.0.1:5000/","http://soc.168dev.com/")
+    authorization_url#.replace("http://127.0.0.1:5000/","http://soc.168dev.com/")
     # Store the state in the session so you can verify the callback
     session['state'] = state
     # At this url, server will redicrect user to Google's OAuth 2.0 server
