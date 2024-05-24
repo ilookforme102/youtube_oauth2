@@ -104,7 +104,7 @@ def authorize():
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
         #Declare the url to redirect to after authorize my application to access their Google data
-        redirect_uri=url_for('yt_bp.oauth2callback', _external=True))
+        redirect_uri='https://soc.168dev.com/youtube/oauth2callback')
     # authorization_url is url to redirect to from /authorize
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -115,6 +115,7 @@ def authorize():
     # At this url, server will redicrect user to Google's OAuth 2.0 server
     return redirect(authorization_url)
     # oauth2callback()
+    #soc.168dev.com/youtube/
 @yt_bp.route('/oauth2callback')
 def oauth2callback():
     # Specify the state when creating the flow in the callback to verify the authorization server response
