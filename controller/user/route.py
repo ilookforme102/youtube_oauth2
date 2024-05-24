@@ -20,7 +20,7 @@ def login():
         if username in users and users[username]['password'] == password:
             session['username'] = username
 
-            return jsonify({'error': 'unauthenticated login'}), 401
+            return jsonify({'message': 'Welcome back, {username}'}), 200
         else:
             return jsonify({'error': 'Invalid username or password'}), 401
 
