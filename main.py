@@ -50,7 +50,7 @@ def authorize():
         redirect_uri=url_for('oauth2callback', _external=True))
     # authorization_url is url to redirect to from /authorize
     authorization_url, state = flow.authorization_url(
-        access_type='offline',
+        access_type='online',
         include_granted_scopes='true', prompt = 'consent')
 
     # Store the state in the session so you can verify the callback

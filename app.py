@@ -15,4 +15,4 @@ app.register_blueprint(fb_bp)
 app.register_blueprint(yt_bp)
 app.register_blueprint(user_bp)
 if __name__ == '__main__':
-    app.run(port=3000, debug=True)
+    app.run(port=5000, debug=True)
