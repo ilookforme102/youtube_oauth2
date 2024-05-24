@@ -99,7 +99,7 @@ def authorize():
     authorization_url, state = flow.authorization_url(
         access_type='offline',
         include_granted_scopes='true', prompt = 'consent')
-    authorization_url.replace("http://127.0.0.1:5000/","https://soc.168dev.com/")
+    authorization_url.replace("http://127.0.0.1:5000/","http://soc.168dev.com/")
     # Store the state in the session so you can verify the callback
     session['state'] = state
     # At this url, server will redicrect user to Google's OAuth 2.0 server
@@ -112,7 +112,6 @@ def oauth2callback():
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE, scopes=SCOPES, state=state,
         redirect_uri=url_for('oauth2callback', _external=True))
-        # redirect_uri='https://soc.168dev.com/youtube/oauth2callback'
     authorization_response = request.url
     # Fet_token method is being used to exchange client secret with refresh token
     flow.fetch_token(authorization_response=authorization_response)
