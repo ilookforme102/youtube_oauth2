@@ -123,7 +123,7 @@ def oauth2callback():
 
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE, scopes=SCOPES, state=state,
-        redirect_uri='https://soc.168dev.com/youtube/oauth2callback'))
+        redirect_uri='https://soc.168dev.com/youtube/oauth2callback')
 
     authorization_response = request.url
     # Fet_token method is being used to exchange client secret with refresh token
