@@ -10,19 +10,27 @@ import json
 import os
 import requests
 import pymysql
+#############################
+# db_username = 'vn168_soc'
+# db_password = 'YrTBD2CCyXALBPzs'
+# db_host = '23.226.8.83'
+# db_database = 'vn168_soc'
+# db_port = 3306
+# app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_username}:{db_password}@{db_host}/{db_database}'
+# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 ########MySQL###############
-host='128.199.228.235'
-user='sql_dabanhtructi'
-password='FKb75AYJzFMJET8F'
-database='sql_dabanhtructi'
+host='23.226.8.83'
+user='vn168_soc'
+password='YrTBD2CCyXALBPzs'
+database='vn168_soc'
 port = 3306
 def get_data(sql):
     conn = pymysql.connect(
-            host='128.199.228.235', 
-            user='sql_dabanhtructi', 
-            password='FKb75AYJzFMJET8F', 
-            database='sql_dabanhtructi',
-            port = 3306)
+            host=host, 
+            user= user, 
+            password=password, 
+            database=database,
+            port = port)
     cursor = conn.cursor()
     try:
         cursor.execute(sql)
@@ -274,8 +282,8 @@ def get_refresh_token(channel_name):
     ON c.owner_id = u.user_id 
     WHERE channel_name = "{channel_name}";'''.format(channel_name = channel_name)
     rows = get_data(sql)
-    refresh_token = rows[0][1]
-    channel_id = rows[0][0]
+    refresh_token = ""#rows[0][1]
+    channel_id = "" # rows[0][0]
     return refresh_token,channel_id
 refresh_token,channel_id = get_refresh_token("Shang Uchiha")
 def access_token_generate(refresh_token):
