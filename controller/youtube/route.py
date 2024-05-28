@@ -10,6 +10,9 @@ import json
 import os
 import requests
 import pymysql
+import os
+from dotenv import load_dotenv
+load_dotenv()
 #############################
 # db_username = 'vn168_soc'
 # db_password = 'YrTBD2CCyXALBPzs'
@@ -112,7 +115,7 @@ def authorize():
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
         #Declare the url to redirect to after authorize my application to access their Google data
-        redirect_uri='https://soc.168dev.com/youtube/oauth2callback')
+        redirect_uri= os.getenv('OAUTH2_REDIRECT_URI'))
     # authorization_url is url to redirect to from /authorize
     authorization_url, state = flow.authorization_url(
         access_type='offline',
@@ -131,7 +134,7 @@ def oauth2callback():
 
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE, scopes=SCOPES, state=state,
-        redirect_uri='https://soc.168dev.com/youtube/oauth2callback')
+        redirect_uri=os.getenv('OAUTH2_REDIRECT_URI'))
 
     authorization_response = request.url
     # Fet_token method is being used to exchange client secret with refresh token
@@ -142,11 +145,12 @@ def oauth2callback():
     #Convert credentials into a python dictionary 
     #as same datatype of session object
     session['credentials'] = credentials_to_dict(credentials)
-
+    after_callback = os.getenv('CALLBACK_REDIRECT_URL')
+    return redirect(after_callback)
     # Print out the refresh token
     # print(f"Refresh Token: {credentials.refresh_token}")
     # return credentials_to_dict(credentials)
-    return jsonify(session['credentials'])#redirect("https://5goal.club/tin-the-thao/esports")#'Authorization complete. Check the console for the refresh token.'
+    # return jsonify(session['credentials'])#redirect("https://5goal.club/tin-the-thao/esports")#'Authorization complete. Check the console for the refresh token.'
 # The reason to get access token is that it  only valid for a couple minutes 
 # so everytime we want to get data from user, we have to use refresh token to get the access token
 # Request new access token at https://oauth2.googleapis.com/token
@@ -390,7 +394,7 @@ def insights():
 @yt_bp.route('/test')
 def test(): 
     end_date = datetime.date.today().isoformat()
-
+    return {'date':end_date}
 #SELECT * FROM `db_gg_channel` as c INNER JOIN `db_gg_user` u ON c.owner_id = u.user_id WHERE channel_name = "Shang Uchiha";
     return end_date
 @yt_bp.route('/get_channel_insights')
