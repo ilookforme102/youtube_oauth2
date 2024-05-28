@@ -2,3 +2,5 @@
 __pycache__/
 cred3.json
 .env
+google_remake.py
+google_oauth2.py 
