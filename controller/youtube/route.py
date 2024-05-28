@@ -154,7 +154,10 @@ def oauth2callback():
 # The reason to get access token is that it  only valid for a couple minutes 
 # so everytime we want to get data from user, we have to use refresh token to get the access token
 # Request new access token at https://oauth2.googleapis.com/token
-
+@yt_bp.route('/get_credentials')
+def get_credentials():
+    return session['credentials']
+####generating new access token
 @yt_bp.route('/get_access_token')
 def get_access_token():
     current_credentitals = session['credentials']
@@ -191,6 +194,16 @@ def gg_save_user_info():
     user_name = user_info.get('name')
     # session['user_name']= user_name
     refresh_token =  session['credentials']['refresh_token']
+    new_user = GoogleAccount(
+        user_id = user_id,
+        user_email =  user_email,
+        refresh_token = refresh_token,
+        person_in_charge = user_name
+
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'message': 'User data added successfully'}), 200
     # if Goo
     # conn = pymysql.connect(host=host,user=user, password=password, database=database,port=port)
     # try:
@@ -218,7 +231,32 @@ def gg_save_user_info():
     #     conn.close()
     # return "Your data is fucking stolen!!"
     # return redirect('/gg_save_page_info')
-@yt_bp.route('/gg_save_page_info')
+@yt_bp.route('/gg_save_channel_info')
+def save_channel_info():
+    if 'credentials' not in session:
+        return redirect('authorize')
+    
+    credentials = session_to_credentials(session['credentials'])
+    # user__id = session['user_id']
+    #get channel id
+    youtube = build('youtube', 'v3', credentials=credentials)
+    request = youtube.channels().list(
+        part='id,snippet,contentDetails,statistics',
+        mine=True
+    )
+    response = request.execute()
+    for item in response.get('items', []):
+        owner_id = session['user_id']
+        channel_id = item['id']
+        channel_name  =  item['snippet']['title']
+        new_channel = YoutubeChannel(
+            channel_id =  channel_id,
+            channel_name =channel_name,
+            user_id =owner_id,
+        )
+        db.session.add(new_channel)
+    db.session.commit()
+    return jsonify({'message': 'Channel data added successfully'}), 200    
 def gg_save_page_info():
     if 'credentials' not in session:
         return redirect('authorize')
@@ -239,7 +277,7 @@ def gg_save_page_info():
                 owner_id = session['user_id']
                 channel_id = item['id']
                 channel_name  =  item['snippet']['title']
-                sql = "INSERT INTO `db_gg_channel` (`channel_id`, `channel_name`,`owner_id`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `channel_id` = VALUES(`channel_id`),`channel_name` = VALUES(`channel_name`),`owner_id` = VALUES(`owner_id`)"
+                sql = "INSERT INTO `db_vn168_soc_yt_channel` (`channel_id`, `channel_name`,`user_id`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `channel_id` = VALUES(`channel_id`),`channel_name` = VALUES(`channel_name`),`owner_id` = VALUES(`owner_id`)"
                 
                 # Values to insert
                 values = (channel_id, channel_name,owner_id)
@@ -409,3 +447,5 @@ def get_channel_insights():
     return rows
 # if __name__ == '__main__':
 #     app.run('localhost', port= 3000, debug=True)
+# ya29.a0AXooCgu5g3bBX0fOhiVv_R-836FVvy8njpTEn18aY-Uwyx7O0OR5nDFFRXAGQHamtJLfw_H0UyL8-6e-OsDtHB_7kqVJqjE3iO1CCj80L4ZHF-h-Xx8HSbW31LWXH8Rrb3Lv-qBaW8EgcLtlNYbhCZd1OveU-wjd9Y5DaCgYKAdYSAQ8SFQHGX2MiB5L9i0KKjRHydr36UGC_0w0171
+# ya29.a0AXooCgtGYLvbTh7W_pcpa56YauiqfZ4S1tgsIjqWXCiVO0J8vWc32wdX4p6ClxYnF6hMydQR0fgqi8Aza09sfrNMYcc_bR_6vBAYNxeOujxO8QxlebvIrHzRViVDIsO-LX--Ko_gDeAU72j3v9m7ZA0Oer01-Lih3IODaCgYKAWgSAQ8SFQHGX2MiMOA7-mM0sMGlZpfzxAYjJg0171

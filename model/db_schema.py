@@ -29,10 +29,10 @@ from config import app,db
 # db = SQLAlchemy(app)
 # Table Creation
 class GoogleAccount(db.Model):
-    __tablename__ = 'db_vn168_soc_yt_account'
+    __tablename__ = 'db_vn168_soc_yt_user'
     id = db.Column(db.Integer, primary_key = True, autoincrement = True)
     user_id =  db.Column(db.String(255), unique = True, nullable = False)
-    user_name =  db.Column(db.String(255), nullable = False)
+    # user_name =  db.Column(db.String(255), nullable = False)
     user_email =  db.Column(db.String(255), unique = True, nullable = False)
     refresh_token =  db.Column(db.String(255), unique = True, nullable = False)
     person_in_charge = db.Column(db.String(255), unique = True, nullable = False)
@@ -44,7 +44,7 @@ class YoutubeChannel(db.Model):
     channel_id =  db.Column(db.String(255), unique = True, nullable = False)
     channel_name =  db.Column(db.String(255), nullable = False)
     user_id =  db.Column(db.String(255), unique = True, nullable = False)
-    person_in_charge = db.Column(db.String(255), unique = True, nullable = False)
+    # person_in_charge = db.Column(db.String(255), unique = True, nullable = False)
 class FacebookAccount(db.Model):
     __tablename__ = 'db_vn168_soc_fb_account'
     id = db.Column(db.Integer, primary_key = True,autoincrement = True)
