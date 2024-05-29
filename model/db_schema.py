@@ -28,6 +28,16 @@ from config import app,db
 
 # db = SQLAlchemy(app)
 # Table Creation
+class YoutubeData(db.Model):
+    __tablename__ = 'db_vn168_soc_yt_data'
+    id = db.Column(db.Integer, primary_key = True, autoincrement = True)
+    user_id =  db.Column(db.String(255), unique = True, nullable = False)
+    channel_id =  db.Column(db.String(255), unique = True, nullable = False)
+    channel_name =  db.Column(db.String(255), nullable = False)
+    # user_name =  db.Column(db.String(255), nullable = False)
+    user_email =  db.Column(db.String(255), unique = True, nullable = False)
+    refresh_token =  db.Column(db.String(255), unique = True, nullable = False)
+    # person_in_charge = db.Column(db.String(255), unique = True, nullable = False)
 class GoogleAccount(db.Model):
     __tablename__ = 'db_vn168_soc_yt_user'
     id = db.Column(db.Integer, primary_key = True, autoincrement = True)

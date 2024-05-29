@@ -4,7 +4,7 @@ from flask import Flask, redirect, request, session, url_for, jsonify
 from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from model.db_schema import app, db, User, GoogleAccount, YoutubeChannel, FacebookAccount, FacebookPage
+from model.db_schema import app, db, User, GoogleAccount, YoutubeChannel,YoutubeData, FacebookAccount, FacebookPage
 import datetime
 import json
 import os
@@ -68,7 +68,6 @@ app.secret_key = 'f33924fea4dd7123a0daa9d2a7213679'  # Needed for session tracki
 channel_ids = []
 # Google OAuth 2.0 Client ID and Secret
 CLIENT_SECRETS_FILE = "cred3.json"
-after_callback = os.getenv('CALLBACK_REDIRECT_URL')
 SCOPES = [
     'https://www.googleapis.com/auth/youtube.readonly',  # To access YouTube channel data
     'https://www.googleapis.com/auth/userinfo.email',    # To access the user's email address
@@ -156,56 +155,54 @@ def oauth2callback():
     refresh_token =  session['yt_credentials']['refresh_token']
     #Convert credentials into a python dictionary 
     #as same datatype of session object
-    if GoogleAccount.query.filter(GoogleAccount.user_id ==user_id).all():
-        youtube = build('youtube', 'v3', credentials=credentials)
-        api_request = youtube.channels().list(
-            part='id,snippet,contentDetails,statistics',
-            mine=True
-        )
-        response = api_request.execute()
-        for item in response.get('items', []):
-            # owner_id = user_id
-            channel_id = item['id']
-            channel_name  =  item['snippet']['title']
-            if YoutubeChannel.query.filter(YoutubeChannel.channel_id ==channel_id).all():
-                return redirect(url_for("yt_bp.authorize"))
-            new_channel = YoutubeChannel(
-                channel_id =  channel_id,
-                channel_name =channel_name,
-                user_id =user_id,
-            )
-            db.session.add(new_channel)
-            db.session.commit()
-        return redirect(after_callback)  
-    else:
-        youtube = build('youtube', 'v3', credentials=credentials)
-        api_request = youtube.channels().list(
-            part='id,snippet,contentDetails,statistics',
-            mine=True
-        )
-        response = api_request.execute()
-        for item in response.get('items', []):
-            channel_id = item['id']
-            channel_name  =  item['snippet']['title']
-            if YoutubeChannel.query.filter(YoutubeChannel.channel_id ==channel_id).all():
-                return redirect(url_for("yt_bp.authorize"))
-            new_channel = YoutubeChannel(
-                channel_id =  channel_id,
-                channel_name =channel_name,
-                user_id =user_id,
-            )
-            db.session.add(new_channel)
-        db.session.commit()
-        new_user = GoogleAccount(
+    # if YoutubeChannel.query.filter(YoutubeChannel.channel_id ==channel_id).all():
+    #     return redirect(url_for("yt_bp.authorize"))
+    if YoutubeData.query.filter(YoutubeData.user_id ==user_id).all():
+        return redirect(url_for("yt_bp.authorize"))
+        # youtube = build('youtube', 'v3', credentials=credentials)
+        # api_request = youtube.channels().list(
+        #     part='id,snippet,contentDetails,statistics',
+        #     mine=True
+        # )
+        # response = api_request.execute()
+        # for item in response.get('items', []):
+        #     # owner_id = user_id
+        #     channel_id = item['id']
+        #     channel_name  =  item['snippet']['title']
+        #     if YoutubeChannel.query.filter(YoutubeChannel.channel_id ==channel_id).all():
+        #         return redirect(url_for("yt_bp.authorize"))
+        #     new_channel = YoutubeChannel(
+        #         channel_id =  channel_id,
+        #         channel_name =channel_name,
+        #         user_id =user_id,
+        #     )
+        #     db.session.add(new_channel)
+        #     db.session.commit()
+        # return jsonify({'message': 'ok'}), 200    
+    
+    youtube = build('youtube', 'v3', credentials=credentials)
+    api_request = youtube.channels().list(
+        part='id,snippet,contentDetails,statistics',
+        mine=True
+    )
+    response = api_request.execute()
+    for item in response.get('items', []):
+        channel_id = item['id']
+        channel_name  =  item['snippet']['title']
+        if YoutubeData.query.filter(YoutubeData.channel_id ==channel_id).all():
+            return redirect(url_for("yt_bp.authorize"))
+        new_channel = YoutubeData(
             user_id = user_id,
-            user_email =  user_email,
-            refresh_token = refresh_token,
-            person_in_charge = user_name
-
+            channel_id =  channel_id,
+            channel_name =channel_name,
+            user_email = user_email,
+            refresh_token = refresh_token
+            
         )
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(after_callback)
+        db.session.add(new_channel)
+    db.session.commit()
+    
+    return jsonify({'message': 'Channel data added successfully'}), 200    
     
     # after_callback = os.getenv('CALLBACK_REDIRECT_URL')
     # return jsonify({'name':user_name,'email':user_email,'user_id':user_id,'refresh_token':refresh_token})
