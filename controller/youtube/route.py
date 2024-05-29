@@ -68,6 +68,7 @@ app.secret_key = 'f33924fea4dd7123a0daa9d2a7213679'  # Needed for session tracki
 channel_ids = []
 # Google OAuth 2.0 Client ID and Secret
 CLIENT_SECRETS_FILE = "cred3.json"
+after_callback = os.getenv('CALLBACK_REDIRECT_URL')
 SCOPES = [
     'https://www.googleapis.com/auth/youtube.readonly',  # To access YouTube channel data
     'https://www.googleapis.com/auth/userinfo.email',    # To access the user's email address
@@ -142,25 +143,87 @@ def oauth2callback():
     #At this point flow.credentials only have value of access token and refresh token under flow.credentials.token
     # and flow.credentials.refresh_token
     credentials = flow.credentials
+    session['yt_credentials'] = credentials_to_dict(credentials)
+    oauth2_service = build('oauth2', 'v2', credentials=credentials)
+    # Get user information
+    user_info = oauth2_service.userinfo().get().execute()
+    user_id = user_info.get('id')
+    session['user_id']= user_id
+    user_email = user_info.get('email')
+    # session['user_email']= user_email
+    user_name = user_info.get('name')
+    # session['user_name']= user_name
+    refresh_token =  session['yt_credentials']['refresh_token']
     #Convert credentials into a python dictionary 
     #as same datatype of session object
-    session['credentials'] = credentials_to_dict(credentials)
-    after_callback = os.getenv('CALLBACK_REDIRECT_URL')
-    return redirect(after_callback)
+    if GoogleAccount.query.filter(GoogleAccount.user_id ==user_id).all():
+        youtube = build('youtube', 'v3', credentials=credentials)
+        api_request = youtube.channels().list(
+            part='id,snippet,contentDetails,statistics',
+            mine=True
+        )
+        response = api_request.execute()
+        for item in response.get('items', []):
+            # owner_id = user_id
+            channel_id = item['id']
+            channel_name  =  item['snippet']['title']
+            if YoutubeChannel.query.filter(YoutubeChannel.channel_id ==channel_id).all():
+                return redirect(url_for("yt_bp.authorize"))
+            new_channel = YoutubeChannel(
+                channel_id =  channel_id,
+                channel_name =channel_name,
+                user_id =user_id,
+            )
+            db.session.add(new_channel)
+            db.session.commit()
+        return redirect(after_callback)  
+    else:
+        youtube = build('youtube', 'v3', credentials=credentials)
+        api_request = youtube.channels().list(
+            part='id,snippet,contentDetails,statistics',
+            mine=True
+        )
+        response = api_request.execute()
+        for item in response.get('items', []):
+            channel_id = item['id']
+            channel_name  =  item['snippet']['title']
+            if YoutubeChannel.query.filter(YoutubeChannel.channel_id ==channel_id).all():
+                return redirect(url_for("yt_bp.authorize"))
+            new_channel = YoutubeChannel(
+                channel_id =  channel_id,
+                channel_name =channel_name,
+                user_id =user_id,
+            )
+            db.session.add(new_channel)
+        db.session.commit()
+        new_user = GoogleAccount(
+            user_id = user_id,
+            user_email =  user_email,
+            refresh_token = refresh_token,
+            person_in_charge = user_name
+
+        )
+        db.session.add(new_user)
+        db.session.commit()
+        return redirect(after_callback)
+    
+    # after_callback = os.getenv('CALLBACK_REDIRECT_URL')
+    # return jsonify({'name':user_name,'email':user_email,'user_id':user_id,'refresh_token':refresh_token})
+    # return redirect(after_callback)
     # Print out the refresh token
     # print(f"Refresh Token: {credentials.refresh_token}")
     # return credentials_to_dict(credentials)
-    # return jsonify(session['credentials'])#redirect("https://5goal.club/tin-the-thao/esports")#'Authorization complete. Check the console for the refresh token.'
+    # return jsonify(session['yt_credentials'])#redirect("https://5goal.club/tin-the-thao/esports")#'Authorization complete. Check the console for the refresh token.'
 # The reason to get access token is that it  only valid for a couple minutes 
 # so everytime we want to get data from user, we have to use refresh token to get the access token
 # Request new access token at https://oauth2.googleapis.com/token
 @yt_bp.route('/get_credentials')
 def get_credentials():
-    return session['credentials']
+    return session['yt_credentials']
 ####generating new access token
 @yt_bp.route('/get_access_token')
 def get_access_token():
-    current_credentitals = session['credentials']
+    current_credentitals = session['yt_credentials']
     refresh_token = current_credentitals['refresh_token']
     client_id = current_credentitals['client_id']
     client_secret = current_credentitals['client_secret']
@@ -174,14 +237,14 @@ def get_access_token():
     response = requests.post(request_url, data=request_data)
     response_data = response.json()
     new_access_token = response_data.get('access_token')
-    session['credentials']['token']=  new_access_token
+    session['yt_credentials']['token']=  new_access_token
     return new_access_token
 
 @yt_bp.route('/gg_save_user_info', methods = ['GET','OPTIONS'])
 def gg_save_user_info():
     if 'credentials' not in session:
         return redirect('authorize')
-    credentials = session_to_credentials(session['credentials'])
+    credentials = session_to_credentials(session['yt_credentials'])
     #Get user id and email
     oauth2_service = build('oauth2', 'v2', credentials=credentials)
 
@@ -193,7 +256,9 @@ def gg_save_user_info():
     # session['user_email']= user_email
     user_name = user_info.get('name')
     # session['user_name']= user_name
-    refresh_token =  session['credentials']['refresh_token']
+    refresh_token =  session['yt_credentials']['refresh_token']
+    if GoogleAccount.query.filter(GoogleAccount.user_id == user.user_id).all():
+        return jsonify({"error": "Device info is already existed, please try again"}), 409
     new_user = GoogleAccount(
         user_id = user_id,
         user_email =  user_email,
@@ -203,7 +268,7 @@ def gg_save_user_info():
     )
     db.session.add(new_user)
     db.session.commit()
-    return jsonify({'message': 'User data added successfully'}), 200
+    return jsonify({'message': 'User data added successfully','data': user_email}), 200
     # if Goo
     # conn = pymysql.connect(host=host,user=user, password=password, database=database,port=port)
     # try:
@@ -236,7 +301,7 @@ def save_channel_info():
     if 'credentials' not in session:
         return redirect('authorize')
     
-    credentials = session_to_credentials(session['credentials'])
+    credentials = session_to_credentials(session['yt_credentials'])
     # user__id = session['user_id']
     #get channel id
     youtube = build('youtube', 'v3', credentials=credentials)
@@ -255,48 +320,48 @@ def save_channel_info():
             user_id =owner_id,
         )
         db.session.add(new_channel)
-    db.session.commit()
+        db.session.commit()
     return jsonify({'message': 'Channel data added successfully'}), 200    
-def gg_save_page_info():
-    if 'credentials' not in session:
-        return redirect('authorize')
+# def gg_save_page_info():
+#     if 'credentials' not in session:
+#         return redirect('authorize')
     
-    credentials = session_to_credentials(session['credentials'])
-    # user__id = session['user_id']
-    #get channel id
-    youtube = build('youtube', 'v3', credentials=credentials)
-    request = youtube.channels().list(
-        part='id,snippet,contentDetails,statistics',
-        mine=True
-    )
-    response = request.execute()
-    conn = pymysql.connect(host=host, user = user, password= password, database = database, port=port)
-    try:
-        with conn.cursor() as cursor:
-            for item in response.get('items', []):
-                owner_id = session['user_id']
-                channel_id = item['id']
-                channel_name  =  item['snippet']['title']
-                sql = "INSERT INTO `db_vn168_soc_yt_channel` (`channel_id`, `channel_name`,`user_id`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `channel_id` = VALUES(`channel_id`),`channel_name` = VALUES(`channel_name`),`owner_id` = VALUES(`owner_id`)"
+#     credentials = session_to_credentials(session['yt_credentials'])
+#     # user__id = session['user_id']
+#     #get channel id
+#     youtube = build('youtube', 'v3', credentials=credentials)
+#     request = youtube.channels().list(
+#         part='id,snippet,contentDetails,statistics',
+#         mine=True
+#     )
+#     response = request.execute()
+#     conn = pymysql.connect(host=host, user = user, password= password, database = database, port=port)
+#     try:
+#         with conn.cursor() as cursor:
+#             for item in response.get('items', []):
+#                 owner_id = session['user_id']
+#                 channel_id = item['id']
+#                 channel_name  =  item['snippet']['title']
+#                 sql = "INSERT INTO `db_vn168_soc_yt_channel` (`channel_id`, `channel_name`,`user_id`) VALUES (%s, %s, %s) ON DUPLICATE KEY UPDATE `channel_id` = VALUES(`channel_id`),`channel_name` = VALUES(`channel_name`),`owner_id` = VALUES(`owner_id`)"
                 
-                # Values to insert
-                values = (channel_id, channel_name,owner_id)
+#                 # Values to insert
+#                 values = (channel_id, channel_name,owner_id)
                 
-                # Execute the SQL statement
-                cursor.execute(sql, values)
+#                 # Execute the SQL statement
+#                 cursor.execute(sql, values)
                 
-                # Commit the transaction
-                conn.commit()
+#                 # Commit the transaction
+#                 conn.commit()
                 
-                print("Values inserted successfully.")
+#                 print("Values inserted successfully.")
             
 
-    except pymysql.MySQLError as e:
-        print(f"Error: {e}")
-    finally:
-        # Close the connection
-        conn.close()
-    return response
+#     except pymysql.MySQLError as e:
+#         print(f"Error: {e}")
+#     finally:
+#         # Close the connection
+#         conn.close()
+#     return response
 ###################################################################
 #####Below are the endponts use to get data from database only#####
 ###################################################################
