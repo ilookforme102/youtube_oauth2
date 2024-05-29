@@ -111,7 +111,7 @@ def authorize():
     #redirected. This URL directs the user to Google's OAuth 2.0 server, 
     #where they can authorize your application to access their Google data 
     #according to the scopes you've requested.
-    session.clear()
+    # session.clear()
     flow = Flow.from_client_secrets_file(
         CLIENT_SECRETS_FILE,
         scopes=SCOPES,
