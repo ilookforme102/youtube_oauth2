@@ -4,7 +4,7 @@ from config import app, db
 from model.db_schema import User
 
 user_bp = Blueprint('user_bp', __name__, url_prefix='/user')
-@user_bp.route('/login', methods=['POST', 'GET'])
+@user_bp.route('/login', methods=['POST'])
 def login():
     session.permanent = True
     app.permanent_session_lifetime = timedelta(minutes=60)

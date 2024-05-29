@@ -182,7 +182,7 @@ def oauth2callback():
         db.session.add(new_channel)
     db.session.commit()
     
-    return jsonify({'message': 'Channel data added successfully'}), 200    
+    return jsonify({'message': 'Channel data added successfully','name': session['username']}), 200    
     
     # after_callback = os.getenv('CALLBACK_REDIRECT_URL')
     # return jsonify({'name':user_name,'email':user_email,'user_id':user_id,'refresh_token':refresh_token})
