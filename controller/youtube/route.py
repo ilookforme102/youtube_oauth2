@@ -442,10 +442,17 @@ def get_channel_list():
 #     ).execute()
 #     return jsonify(response)
 ###########################################################
-#########POST METHOD:
+#########DELETE METHOD:
 #########Get the channel as parameter and returns time serries data about
-#########channel insights, you can find all the neccessary metrics from meta API website
-#########Postman test - Body -Raw :  {"channel_name":"Shang Uchiha"}
+@yt_bp.route('/list_channels/<string:channel_id>',methods = ['DELETE','OPTIONS'])
+def delete_channel(channel_id):
+    channel_id =YoutubeData.query.filter(YoutubeData.channel_id == channel_id).first()
+    if channel_id:
+        db.session.delete(channel_id)
+        db.session.commit()
+        return jsonify({'message': 'channel_id removed successfully'}),200
+    else:
+        return jsonify({'error':'channel_id not found'}),404
 @yt_bp.route('/insights')
 def insights():
     data = request.args
