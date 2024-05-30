@@ -167,6 +167,7 @@ def oauth2callback():
     )
     response = api_request.execute()
     for item in response.get('items', []):
+        person_in_charge = session['username']
         channel_id = item['id']
         channel_name  =  item['snippet']['title']
         if YoutubeData.query.filter(YoutubeData.channel_id ==channel_id).all():
@@ -176,7 +177,8 @@ def oauth2callback():
             channel_id =  channel_id,
             channel_name =channel_name,
             user_email = user_email,
-            refresh_token = refresh_token
+            refresh_token = refresh_token,
+            person_in_charge = person_in_charge
             
         )
         db.session.add(new_channel)
@@ -345,14 +347,7 @@ def get_refresh_token(channel_name):
     data = [{'channel_id': result.channel_id, 'refresh_token':result.refresh_token} for result in results]
     channel_id = data[0]['channel_id']
     refresh_token = data[0]['refresh_token']
-    # sql = '''SELECT c.channel_id, u.refresh_token 
-    # FROM `db_gg_channel` as c 
-    # INNER JOIN `db_gg_user` u 
-    # ON c.owner_id = u.user_id 
-    # WHERE channel_name = "{channel_name}";'''.format(channel_name = channel_name)
-    # rows = get_data(sql)
-    # refresh_token = ""#rows[0][1]
-    # channel_id = "" # rows[0][0]
+
     return refresh_token,channel_id
 # refresh_token,channel_id = get_refresh_token("Shang Uchiha")
 def access_token_generate(refresh_token):
@@ -377,21 +372,31 @@ def credentials_generate(access_token, refresh_token,token_uri,client_id,client_
         client_secret=client_secret,
         scopes=SCOPES)
 @yt_bp.route('/list_channels')
-def get_refresh_tokens():
-    data = request.args
-    channel_name = data.get("channel_name")
+def get_channel_list():
     results = db.session.query(
         YoutubeData.channel_id, 
-        YoutubeData.refresh_token
-    ).filter(
-        YoutubeData.channel_name == channel_name
+        YoutubeData.channel_name,
+        YoutubeData.person_in_charge
     ).all()
-    if not results:
-        return jsonify({'message':'no record found'}),404
-    data = [{'channel_id': result.channel_id, 'refresh_token':result.refresh_token} for result in results]
-    # channel_id = data[0]['channel_id']
-    # refresh_token = data[0]['refresh_token']
+    data = [{'channel_name': result.channel_name,
+             'channel_id': result.channel_id, 
+             'person_in_charge': result.person_in_charge} for result in results]
     return jsonify(data)
+# def get_refresh_tokens():
+#     data = request.args
+#     channel_name = data.get("channel_name")
+#     results = db.session.query(
+#         YoutubeData.channel_id, 
+#         YoutubeData.refresh_token
+#     ).filter(
+#         YoutubeData.channel_name == channel_name
+#     ).all()
+#     if not results:
+#         return jsonify({'message':'no record found'}),404
+#     data = [{'channel_id': result.channel_id, 'refresh_token':result.refresh_token} for result in results]
+#     # channel_id = data[0]['channel_id']
+#     # refresh_token = data[0]['refresh_token']
+#     return jsonify(data)
 #test a get method to return insights metrics 
 #for a specific channel   
 # @yt_bp.route('/get_channel_metrics')
