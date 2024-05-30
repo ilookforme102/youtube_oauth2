@@ -373,7 +373,7 @@ def credentials_generate(access_token, refresh_token,token_uri,client_id,client_
         scopes=SCOPES)
 @yt_bp.route('/list_channels')
 def get_channel_list():
-    data = request.form
+    data = request.args
     
     results = db.session.query(
         YoutubeData.channel_id, 
