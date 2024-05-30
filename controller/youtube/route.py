@@ -476,7 +476,11 @@ def insights_view():
         dimensions='day',
         sort = 'day'
     ).execute()
-    return jsonify(response)
+    rows = response['rows']
+    dates = [i[0] for i in rows]
+    values = [i[1] for i in rows]
+    metric_data = {'date':dates, 'values':values}
+    return jsonify(metric_data)
 @yt_bp.route('/insights/views_percentage')
 def insights_views_percentage():
     data = request.args
@@ -500,7 +504,11 @@ def insights_views_percentage():
         dimensions='day',
         sort = 'day'
     ).execute()
-    return jsonify(response)
+    rows = response['rows']
+    dates = [i[0] for i in rows]
+    values = [i[1] for i in rows]
+    metric_data = {'date':dates, 'values':values}
+    return jsonify(metric_data)
 @yt_bp.route('/insights/subscribe')
 def insights_subscribe():
     data = request.args
@@ -524,7 +532,12 @@ def insights_subscribe():
         dimensions='day',
         sort = 'day'
     ).execute()
-    return jsonify(response)
+    rows = response['rows']
+    dates = [i[0] for i in rows]
+    values1 = [i[1] for i in rows]
+    values2 = [i[2] for i in rows]
+    metric_data = {'date':dates, 'subscribers_lost':values1, 'subscribersGained':values2}
+    return jsonify(metric_data)
 @yt_bp.route('/insights/like')
 def insights_like():
     data = request.args
@@ -548,7 +561,12 @@ def insights_like():
         dimensions='day',
         sort = 'day'
     ).execute()
-    return jsonify(response)
+    rows = response['rows']
+    dates = [i[0] for i in rows]
+    values1 = [i[1] for i in rows]
+    values2 = [i[2] for i in rows]
+    metric_data = {'date':dates, 'like':values1, 'dislikes':values2}
+    return jsonify(metric_data)
 @yt_bp.route('/test')
 def test(): 
     # end_date = datetime.date.today().isoformat()
