@@ -481,8 +481,8 @@ def insights_view():
     values = [i[1] for i in rows]
     metric_data = {'date':dates, 'values':values}
     return jsonify(metric_data)
-@yt_bp.route('/insights/views_percentage')
-def insights_views_percentage():
+@yt_bp.route('/insights/average_view_percentage')
+def insights_average_view_percentage():
     data = request.args
     channel_name = data.get('channel_name')
     refresh_token, channel_id = get_refresh_token(channel_name)
@@ -500,7 +500,7 @@ def insights_views_percentage():
         ids=f'channel=={channel_id}',
         startDate=start_date,
         endDate=end_date,
-        metrics='viewerPercentage',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
+        metrics='averageViewPercentage',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
         dimensions='day',
         sort = 'day'
     ).execute()
@@ -528,10 +528,11 @@ def insights_subscribe():
         ids=f'channel=={channel_id}',
         startDate=start_date,
         endDate=end_date,
-        metrics='subscribers_lost ,subscribersGained',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
+        metrics='subscribersGained,subscribersLost',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
         dimensions='day',
         sort = 'day'
     ).execute()
+    # return jsonify(response)
     rows = response['rows']
     dates = [i[0] for i in rows]
     values1 = [i[1] for i in rows]
@@ -557,7 +558,7 @@ def insights_like():
         ids=f'channel=={channel_id}',
         startDate=start_date,
         endDate=end_date,
-        metrics='like,dislikes',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
+        metrics='likes,dislikes,comments,shares',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
         dimensions='day',
         sort = 'day'
     ).execute()
@@ -565,7 +566,9 @@ def insights_like():
     dates = [i[0] for i in rows]
     values1 = [i[1] for i in rows]
     values2 = [i[2] for i in rows]
-    metric_data = {'date':dates, 'like':values1, 'dislikes':values2}
+    values3 = [i[3] for i in rows]
+    values4 = [i[4] for i in rows]
+    metric_data = {'date':dates, 'likes':values1, 'dislikes':values2,'comments':values3,'shares':values4}
     return jsonify(metric_data)
 @yt_bp.route('/test')
 def test(): 

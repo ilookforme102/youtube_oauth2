@@ -6,8 +6,10 @@
 /youtube/list_channel [GET,DELeTE]
 /youtube/insights/subscribe 
 /youtube/insights/views
+/youtube/insights/like
+/youtube/insights/views
+/youtube/insights/views
 /youtube/insights/top 10 watch time
-/youtube/insights/return views
 /youtube/insights/unique views
 /youtube/insights/ 10 most liked
 /youtube/insights/top 10 least liked
