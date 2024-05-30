@@ -453,8 +453,8 @@ def delete_channel(channel_id):
         return jsonify({'message': 'channel_id removed successfully'}),200
     else:
         return jsonify({'error':'channel_id not found'}),404
-@yt_bp.route('/insights')
-def insights():
+@yt_bp.route('/insights/view')
+def insights_view():
     data = request.args
     channel_name = data.get('channel_name')
     refresh_token, channel_id = get_refresh_token(channel_name)
@@ -472,7 +472,31 @@ def insights():
         ids=f'channel=={channel_id}',
         startDate=start_date,
         endDate=end_date,
-        metrics='estimatedMinutesWatched,views,likes,subscribersGained',
+        metrics='views',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
+        dimensions='day',
+        sort = 'day'
+    ).execute()
+    return jsonify(response)
+@yt_bp.route('/insights/subscribe')
+def insights_subscribe():
+    data = request.args
+    channel_name = data.get('channel_name')
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    youtubeAnalytics = build('youtubeAnalytics', 'v2', credentials=credentials)
+    # Define the date range for the last 30 days
+    # end_date = datetime.date.today().isoformat()
+    # start_date = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+    # Date format: yyyy-mm-dd
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    # Fetch YouTube Analytics data
+    response = youtubeAnalytics.reports().query(
+        ids=f'channel=={channel_id}',
+        startDate=start_date,
+        endDate=end_date,
+        metrics='subscribers_lost ,subscribersGained',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
         dimensions='day',
         sort = 'day'
     ).execute()
