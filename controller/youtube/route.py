@@ -183,8 +183,8 @@ def oauth2callback():
         )
         db.session.add(new_channel)
     db.session.commit()
-    
-    return jsonify({'message': 'Channel data added successfully','name': session['username']}), 200    
+    after_callback = os.getenv('CALLBACK_REDIRECT_URL')
+    return redirect(after_callback)
     
     # after_callback = os.getenv('CALLBACK_REDIRECT_URL')
     # return jsonify({'name':user_name,'email':user_email,'user_id':user_id,'refresh_token':refresh_token})
@@ -477,6 +477,30 @@ def insights_view():
         sort = 'day'
     ).execute()
     return jsonify(response)
+@yt_bp.route('/insights/views_percentage')
+def insights_views_percentage():
+    data = request.args
+    channel_name = data.get('channel_name')
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    youtubeAnalytics = build('youtubeAnalytics', 'v2', credentials=credentials)
+    # Define the date range for the last 30 days
+    # end_date = datetime.date.today().isoformat()
+    # start_date = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+    # Date format: yyyy-mm-dd
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    # Fetch YouTube Analytics data
+    response = youtubeAnalytics.reports().query(
+        ids=f'channel=={channel_id}',
+        startDate=start_date,
+        endDate=end_date,
+        metrics='viewerPercentage',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
+        dimensions='day',
+        sort = 'day'
+    ).execute()
+    return jsonify(response)
 @yt_bp.route('/insights/subscribe')
 def insights_subscribe():
     data = request.args
@@ -497,6 +521,30 @@ def insights_subscribe():
         startDate=start_date,
         endDate=end_date,
         metrics='subscribers_lost ,subscribersGained',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
+        dimensions='day',
+        sort = 'day'
+    ).execute()
+    return jsonify(response)
+@yt_bp.route('/insights/like')
+def insights_like():
+    data = request.args
+    channel_name = data.get('channel_name')
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    youtubeAnalytics = build('youtubeAnalytics', 'v2', credentials=credentials)
+    # Define the date range for the last 30 days
+    # end_date = datetime.date.today().isoformat()
+    # start_date = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
+    # Date format: yyyy-mm-dd
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    # Fetch YouTube Analytics data
+    response = youtubeAnalytics.reports().query(
+        ids=f'channel=={channel_id}',
+        startDate=start_date,
+        endDate=end_date,
+        metrics='like,dislikes',#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
         dimensions='day',
         sort = 'day'
     ).execute()
