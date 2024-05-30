@@ -373,15 +373,25 @@ def credentials_generate(access_token, refresh_token,token_uri,client_id,client_
         scopes=SCOPES)
 @yt_bp.route('/list_channels')
 def get_channel_list():
+    data = request.form
+    
     results = db.session.query(
         YoutubeData.channel_id, 
         YoutubeData.channel_name,
         YoutubeData.person_in_charge
     ).all()
-    data = [{'channel_name': result.channel_name,
+    channel_data = [{'channel_name': result.channel_name,
              'channel_id': result.channel_id, 
              'person_in_charge': result.person_in_charge} for result in results]
-    return jsonify(data)
+    try:
+        page = int(data.get('page',1))
+        per_page = int(data.get('per_page',10))
+        start_index = (page - 1) * per_page
+        end_index = start_index + per_page
+        paginated_data = channel_data[start_index:end_index]
+        return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(channel_data)})
+    except TypeError:
+        return jsonify({'items':channel_data,'page':1,'per_page':len(channel_data), 'total_items':len(channel_data)})
 # def get_refresh_tokens():
 #     data = request.args
 #     channel_name = data.get("channel_name")
