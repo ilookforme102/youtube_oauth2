@@ -394,10 +394,10 @@ def get_channel_list():
         return jsonify({'items':channel_data,'page':1,'per_page':len(channel_data), 'total_items':len(channel_data)})
 @yt_bp.route("/list_channel_name")
 def get_list_channel_name():
-    resutls = db.session.query(
+    results = db.session.query(
         YoutubeData.channel_name
     ).all()
-    data = [result.channel_name for result in resutls]
+    data = [result.channel_name for result in results]
     return jsonify(data)
 # def get_refresh_tokens():
 #     data = request.args
