@@ -581,7 +581,9 @@ def insights_like():
 def insights_metrics():
     data = request.args
     channel_name = data.get('channel_name')
-    metric = data.get('metric','views')
+    metrics = data.get('metric','views')
+    list_metric = [metric for metric in metrics.split(',')]
+    # n_metrics = len(list_metric)
     refresh_token, channel_id = get_refresh_token(channel_name)
     temp_access_token = access_token_generate(refresh_token)
     credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
@@ -597,15 +599,17 @@ def insights_metrics():
         ids=f'channel=={channel_id}',
         startDate=start_date,
         endDate=end_date,
-        metrics=metric,#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
+        metrics=metrics,#estimatedMinutesWatched,views,likes,subscribersGained,uniqueViewers
         dimensions='day',
         sort = 'day'
     ).execute()
+    # list_metric = [metric for metric in list(metrics)]
     rows = response['rows']
     dates = [i[0] for i in rows]
-    values1 = [i[1] for i in rows]
-    metric_data = {'date':dates, metric:values1}
-    return jsonify(metric_data)
+    metric_data = {metric:[i[list_metric.index(metric) +1] for i in rows] for  metric in list_metric}
+    metric_data['date'] = dates
+    return jsonify(  metric_data)
+
 @yt_bp.route('/test')
 def test(): 
     # end_date = datetime.date.today().isoformat()
