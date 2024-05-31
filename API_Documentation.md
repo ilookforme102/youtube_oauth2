@@ -8,7 +8,17 @@
 /youtube/insights/views
 /youtube/insights/like
 /youtube/insights/average_view_percentage
-/youtube/insights/list_channel_name
+/youtube/list_channel_name
+/youtube/insights/metric_option
+
+
+
+
+
+
+
+
+
 
 /youtube/insights/top 10 watch time
 /youtube/insights/unique views
