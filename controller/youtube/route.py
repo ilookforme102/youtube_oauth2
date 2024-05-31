@@ -392,6 +392,13 @@ def get_channel_list():
         return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(channel_data)})
     except TypeError:
         return jsonify({'items':channel_data,'page':1,'per_page':len(channel_data), 'total_items':len(channel_data)})
+@yt_bp.route("/list_channel_name")
+def get_list_channel_name():
+    resutls = db.session.query(
+        YoutubeData.channel_name
+    ).all()
+    data = [result.channel_name for result in resutls]
+    return jsonify(data)
 # def get_refresh_tokens():
 #     data = request.args
 #     channel_name = data.get("channel_name")
@@ -537,7 +544,7 @@ def insights_subscribe():
     dates = [i[0] for i in rows]
     values1 = [i[1] for i in rows]
     values2 = [i[2] for i in rows]
-    metric_data = {'date':dates, 'subscribers_lost':values1, 'subscribersGained':values2}
+    metric_data = {'date':dates, 'subscribersGained':values1, 'subscribers_lost':values2}
     return jsonify(metric_data)
 @yt_bp.route('/insights/like')
 def insights_like():

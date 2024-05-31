@@ -3,12 +3,13 @@
 /youtube
 /youtbe/authorize
 /youtbe/insights
-/youtube/list_channel [GET,DELeTE]
+/youtube/list_channel [GET,DELeTE]  
 /youtube/insights/subscribe 
 /youtube/insights/views
 /youtube/insights/like
-/youtube/insights/views
-/youtube/insights/views
+/youtube/insights/average_view_percentage
+/youtube/insights/list_channel_name
+
 /youtube/insights/top 10 watch time
 /youtube/insights/unique views
 /youtube/insights/ 10 most liked
