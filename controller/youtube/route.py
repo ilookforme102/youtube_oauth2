@@ -624,7 +624,7 @@ def insights_metrics():
 def insights_top_video():
     data = request.args
     channel_name = data.get('channel_name')
-    metric = str(data.get('metric','views'))
+    metrics = str(data.get('metrics'))
     # list_metric = [metric for metric in metrics.split(',')]
     # n_metrics = len(list_metric)
     refresh_token, channel_id = get_refresh_token(channel_name)
@@ -637,17 +637,19 @@ def insights_top_video():
     # Date format: yyyy-mm-dd
     start_date = data.get('start_date')
     end_date = data.get('end_date')
+    #f'channel=={channel_id}',
     # Fetch YouTube Analytics data
     response = youtubeAnalytics.reports().query(
         ids=f'channel=={channel_id}',
-        startDate=start_date,
-        endDate=end_date,
-        metrics=metric,
+        startDate='2024-01-01',
+        endDate='2024-05-31',
+        metrics= metrics,
         dimensions='video',
-        sort= '-'+metric,
-        maxResults=10
+        sort='-'+ metrics,
+        maxResults=10,
+        filters='continent=142'
     ).execute()
-    data = [{'video_id':i[0],metric:i[1]} for i in response['rows']]
+    data = [{'video_id':i[0],metrics:i[1]} for i in response['rows']]
     video_ids = [i[0] for i in response['rows']]
     video_titles = get_video_titles(credentials, video_ids)
     for i in range(0,len(data)):
@@ -658,7 +660,56 @@ def insights_top_video():
     # metric_data = {metric:[i[list_metric.index(metric) +1] for i in rows] for  metric in list_metric}
     # metric_data['date'] = dates
     return jsonify(data)
+###########################################################################################
+@yt_bp.route('/insights/get_channel_video_list')
+def get_channel_video_list():
+    data = request.args
+    channel_name = data.get('channel_name')
+    # metrics = str(data.get('metrics'))
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    youtube = build('youtube', 'v3', credentials=credentials)
+    next_page_token  = None
+    video_list = []
+    response = youtube.search().list(
+            part="snippet",
+            channelId=channel_id,
+            maxResults=25,
+            type="video",
+            order = 'viewCount',
+            pageToken = next_page_token
+        ).execute()
+    # while True:
+    #     response = youtube.search().list(
+    #         part="snippet",
+    #         channelId=channel_id,
+    #         maxResults=25,
+    #         type="video",
+    #         # nextPageToken = next_page_token
+    #     ).execute()
+    #     videos = response['items']
+    #     for video in videos:
+    #         video_id = video['id']['videoId']
+    #         video_scription = video['snippet']['description']
+    #         video_published_at = video['snippet']['publishedAt']
+    #         video_thubnail = video['snippet']['thumbnails']['default']
+    #         video_title = video['snippet']['title']
+    #     next_page_token = response['nextPageToken']
+    #     video_list.append({'video_id':video_id,
+    #                        'video_scription':video_scription,
+    #                        'video_published_at':video_published_at,
+    #                        'video_thubnail':video_thubnail,
+    #                        'video_title':video_title})
+    #     print(video_title)
+    #     if next_page_token == False:
+    #         break
+    return jsonify(response)
 
+
+
+
+###################################################################
 @yt_bp.route("insights/channel_stat", methods = ['POST','GET'])
 def get_channel_stat():
     data = request.args
