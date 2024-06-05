@@ -4,7 +4,7 @@ from flask import Flask, redirect, request, session, url_for, jsonify
 from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from model.db_schema import app, db, User, GoogleAccount, YoutubeChannel,YoutubeData, FacebookAccount, FacebookPage
+from model.db_schema import app, db, User, GoogleAccount, YoutubeChannel,YoutubeData, FacebookAccount,YoutubeVideoData, FacebookPage
 import datetime
 import json
 import os
@@ -96,6 +96,45 @@ def session_to_credentials(session):
         client_id=session['client_id'],
         client_secret=session['client_secret'],
         scopes=session['scopes'])
+def get_all_videos(credentials, channel_id):
+    result = db.session.query()
+    youtube = build('youtube', 'v3', credentials=credentials)
+
+    # Fetch the channel's details to get the uploads playlist ID
+    channel_response = youtube.channels().list(
+        part='contentDetails',
+        id=channel_id
+    ).execute()
+    uploads_playlist_id = channel_response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+
+    # List all videos in the uploads playlist
+    videos = []
+    next_page_token = None
+    while True:
+        playlist_items_response = youtube.playlistItems().list(
+            part='snippet',
+            playlistId=uploads_playlist_id,
+            maxResults=50,  # Max allowed by API
+            pageToken=next_page_token
+        ).execute()
+
+        videos += [{
+            'video_id': item['snippet']['resourceId']['videoId'],
+            'video_title': item['snippet']['title'],
+            'video_description': item['snippet']['description'],
+            'published_at': item['snippet']['publishedAt'],
+            'thumbnail_url': item['snippet']['thumbnails']['default']['url'],
+            'channel_name': item['snippet']['channelTitle'],
+            'channel_id': channel_id,
+            'playlist_id': item['snippet']['playlistId']
+        } for item in playlist_items_response['items']]
+        next_page_token = playlist_items_response.get('nextPageToken')
+        if not next_page_token:
+            break
+
+    return videos
+
+
 @yt_bp.route('/')
 def index():
     # Check if the user is authenticated
@@ -661,25 +700,113 @@ def insights_top_video():
     # metric_data['date'] = dates
     return jsonify(data)
 ###########################################################################################
-@yt_bp.route('/insights/get_channel_video_list')
-def get_channel_video_list():
+###insert video to video table 
+@yt_bp.route('/insights/channel_video_list')
+def channel_video_list():
     data = request.args
+    page = int(data.get('page',1))
+    per_page = int(data.get('per_page',10))
+    start_index = (page - 1) * per_page
+    end_index = start_index + per_page
     channel_name = data.get('channel_name')
     # metrics = str(data.get('metrics'))
     refresh_token, channel_id = get_refresh_token(channel_name)
     temp_access_token = access_token_generate(refresh_token)
     credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
-    youtube = build('youtube', 'v3', credentials=credentials)
-    next_page_token  = None
-    video_list = []
-    response = youtube.search().list(
-            part="snippet",
-            channelId=channel_id,
-            maxResults=25,
-            type="video",
-            order = 'viewCount',
-            pageToken = next_page_token
-        ).execute()
+    # API Key and Channel Details
+    # Fetch all videos
+    videos = get_all_videos(credentials, channel_id)
+    for video in videos:
+        new_video = YoutubeVideoData(
+            video_id = video['video_id'],
+            video_title = video['video_title'],
+            video_description = video['video_description'],
+            published_at = video['published_at'],
+            thumbnail_url = video['thumbnail_url'],
+            channel_name = video['channel_name'],
+            channel_id = video['channel_id'],
+            playlist_id = video['playlist_id'],
+        )
+        db.session.add(new_video)
+        db.session.commit()
+    paginated_data = videos[start_index:end_index]
+
+    # return jsonify(videos)
+    return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(videos)})
+####Get video from database
+@yt_bp.route('/insights/get_channel_video_list')
+def get_channel_video_list():
+    data = request.args
+    channel_name = data.get('channel_name')
+    page = int(data.get('page',1))
+    per_page = int(data.get('per_page',10))
+    start_index = (page - 1) * per_page
+    end_index = start_index + per_page
+    results = db.session.query(
+        YoutubeVideoData.video_id.label('video_id'),
+        YoutubeVideoData.video_title.label('video_title'),
+        YoutubeVideoData.video_description.label('video_description'),
+        YoutubeVideoData.published_at.label('published_at'),
+        YoutubeVideoData.thumbnail_url.label('thumbnail_url'),
+        YoutubeVideoData.channel_name.label('channel_name'),
+        YoutubeVideoData.channel_id.label('channel_id'),
+        YoutubeVideoData.playlist_id.label('playlist_id'),
+    ).filter(
+        YoutubeVideoData.channel_name ==channel_name 
+    ).all()
+    data = [{
+        'video_id': result.video_id,
+        'video_title': result.video_title,
+        'video_description': result.video_description,
+        'published_at': result.published_at,
+        'thumbnail_url': result.thumbnail_url,
+        'channel_name': result.channel_name,
+        'channel_id': result.channel_id,
+        'playlist_id': result.playlist_id
+    } for result in results]
+    paginated_data = data[start_index:end_index]
+
+    # return jsonify(videos)
+    return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(data)})
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+# def get_channel_video_list():
+#     data = request.args
+#     channel_name = data.get('channel_name')
+#     # metrics = str(data.get('metrics'))
+#     refresh_token, channel_id = get_refresh_token(channel_name)
+#     temp_access_token = access_token_generate(refresh_token)
+#     credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+#     youtube = build('youtube', 'v3', credentials=credentials)
+#     next_page_token  = None
+#     video_list = []
+#     response = youtube.search().list(
+#             part="snippet",
+#             channelId=channel_id,
+#             maxResults=25,
+#             type="video",
+#             order = 'viewCount',
+#             pageToken = next_page_token
+#         ).execute()
     # while True:
     #     response = youtube.search().list(
     #         part="snippet",
@@ -704,7 +831,7 @@ def get_channel_video_list():
     #     print(video_title)
     #     if next_page_token == False:
     #         break
-    return jsonify(response)
+    # return jsonify(response)
 
 
 

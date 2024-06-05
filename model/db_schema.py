@@ -28,6 +28,17 @@ from config import app,db
 
 # db = SQLAlchemy(app)
 # Table Creation
+class YoutubeVideoData(db.Model):
+    __tablename__ = 'db_vn168_soc_yt_video_data'
+    id = db.Column(db.Integer, primary_key = True, autoincrement = True)
+    video_id =  db.Column(db.String(255), unique = True, nullable = False)
+    video_title =  db.Column(db.String(255), nullable = False)
+    video_description =  db.Column(db.String(255), nullable = False)
+    published_at =  db.Column(DateTime, nullable = False)
+    thumbnail_url =  db.Column(db.String(255), nullable = False)
+    channel_name =  db.Column(db.String(255),  nullable = False)
+    channel_id =  db.Column(db.String(255),  nullable = False)
+    playlist_id = db.Column(db.String(255),  nullable = True)
 class YoutubeData(db.Model):
     __tablename__ = 'db_vn168_soc_yt_data'
     id = db.Column(db.Integer, primary_key = True, autoincrement = True)

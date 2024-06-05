@@ -10,7 +10,8 @@
 /youtube/insights/average_view_percentage
 /youtube/list_channel_name
 /youtube/insights/metric_option
-
+click on the channel name, show detail stats
+/youtube/insights/string:L<channel_name>/
 
 
 

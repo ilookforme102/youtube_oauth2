@@ -1,6 +1,10 @@
 .venv/
 __pycache__/
 cred3.json
+cred4.json
+cred6.json
+cred7.json
+cred9.json
 .env
 google_remake.py
 google_oauth2.py 
