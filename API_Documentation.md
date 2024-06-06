@@ -12,8 +12,9 @@
 /youtube/insights/metric_option
 click on the channel name, show detail stats
 /youtube/insights/string:L<channel_name>/
-
-
+/insights/view_ratio_by_gender
+/insights/top_video
+/insights/get_channel_video_list
 
 
 

@@ -702,11 +702,12 @@ def insights_top_video():
     # metric_data['date'] = dates
     return jsonify(data)
 ###############Additional charts###########################################################
-@yt_bp.route('/insights/view_ratio_by_gender')
-def get_view_ratio_by_gender():
+@yt_bp.route('/insights/demension_metric_stats') 
+def get_demension_metric_stats():
     data = request.args
     channel_name = data.get('channel_name')
     metrics = str(data.get('metrics'))
+    dimensions = str(data.get('dimensions'))
     start_date = data.get('start_date')
     end_date = data.get('end_date')
     refresh_token, channel_id = get_refresh_token(channel_name)
@@ -717,13 +718,13 @@ def get_view_ratio_by_gender():
         ids=f'channel=={channel_id}',
         startDate=start_date,
         endDate=end_date,
-        metrics='viewerPercentage',
-        dimensions='gender',
-        sort='gender'
+        metrics=metrics,
+        dimensions=dimensions,
+        # sort='day,-views'
         # filters='province==US-CA'
         # filters='continent=142'
     ).execute()
-    data = [{i[0]:i[1]} for i in response['rows']]
+    data =  response['rows']
     # video_ids = [i[0] for i in response['rows']]
     # video_titles = get_video_titles(credentials, video_ids)
     # for i in range(0,len(data)):
