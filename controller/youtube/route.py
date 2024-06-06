@@ -701,6 +701,39 @@ def insights_top_video():
     # metric_data = {metric:[i[list_metric.index(metric) +1] for i in rows] for  metric in list_metric}
     # metric_data['date'] = dates
     return jsonify(data)
+###############Additional charts###########################################################
+@yt_bp.route('/insights/get_top_10_video_by_country')
+def get_top_views():
+    data = request.args
+    channel_name = data.get('channel_name')
+    metrics = str(data.get('metrics'))
+    start_date = data.get('start_date')
+    end_date = data.get('end_date')
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    youtubeAnalytics = build('youtubeAnalytics', 'v2', credentials=credentials)
+    response = youtubeAnalytics.reports().query(
+        ids=f'channel=={channel_id}',
+        startDate=start_date,
+        endDate=end_date,
+        metrics= 'playlistViews',
+        dimensions='playlist',
+        sort='playlistViews',
+        maxResults=10,
+        # filters='continent=142'
+    ).execute()
+    data = [{'video_id':i[0],metrics:i[1]} for i in response['rows']]
+    video_ids = [i[0] for i in response['rows']]
+    video_titles = get_video_titles(credentials, video_ids)
+    for i in range(0,len(data)):
+        data[i]['video_title'] = video_titles[data[i]['video_id']]
+    # list_metric = [metric for metric in list(metrics)]
+    # rows = response['rows']
+    # dates = [i[0] for i in rows]
+    # metric_data = {metric:[i[list_metric.index(metric) +1] for i in rows] for  metric in list_metric}
+    # metric_data['date'] = dates
+    return jsonify(data)
 ###########################################################################################
 ###insert video to video table 
 @yt_bp.route('/insights/channel_video_list')
