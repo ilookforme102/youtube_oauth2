@@ -702,8 +702,8 @@ def insights_top_video():
     # metric_data['date'] = dates
     return jsonify(data)
 ###############Additional charts###########################################################
-@yt_bp.route('/insights/get_top_10_video_by_country')
-def get_top_views():
+@yt_bp.route('/insights/view_ratio_by_gender')
+def get_view_ratio_by_gender():
     data = request.args
     channel_name = data.get('channel_name')
     metrics = str(data.get('metrics'))
@@ -717,17 +717,17 @@ def get_top_views():
         ids=f'channel=={channel_id}',
         startDate=start_date,
         endDate=end_date,
-        metrics= 'playlistViews',
-        dimensions='playlist',
-        sort='playlistViews',
-        maxResults=10,
+        metrics='viewerPercentage',
+        dimensions='gender',
+        sort='gender'
+        # filters='province==US-CA'
         # filters='continent=142'
     ).execute()
-    data = [{'video_id':i[0],metrics:i[1]} for i in response['rows']]
-    video_ids = [i[0] for i in response['rows']]
-    video_titles = get_video_titles(credentials, video_ids)
-    for i in range(0,len(data)):
-        data[i]['video_title'] = video_titles[data[i]['video_id']]
+    data = [{i[0]:i[1]} for i in response['rows']]
+    # video_ids = [i[0] for i in response['rows']]
+    # video_titles = get_video_titles(credentials, video_ids)
+    # for i in range(0,len(data)):
+    #     data[i]['video_title'] = video_titles[data[i]['video_id']]
     # list_metric = [metric for metric in list(metrics)]
     # rows = response['rows']
     # dates = [i[0] for i in rows]
