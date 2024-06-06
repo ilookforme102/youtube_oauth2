@@ -682,8 +682,8 @@ def insights_top_video():
     # Fetch YouTube Analytics data
     response = youtubeAnalytics.reports().query(
         ids=f'channel=={channel_id}',
-        startDate='2024-01-01',
-        endDate='2024-05-31',
+        startDate=start_date,
+        endDate=end_date,
         metrics= metrics,
         dimensions='video',
         sort='-'+ metrics,
@@ -773,7 +773,7 @@ def get_channel_video_list():
 
     # return jsonify(videos)
     return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(data)})
- 
+@yt_bp.route('/stats/')
 
 
 
