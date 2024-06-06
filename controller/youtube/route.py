@@ -6,6 +6,8 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from model.db_schema import app, db, User, GoogleAccount, YoutubeChannel,YoutubeData, FacebookAccount,YoutubeVideoData, FacebookPage
 import datetime
+from datetime import datetime
+import time
 import json
 import os
 import requests
@@ -114,7 +116,7 @@ def get_all_videos(credentials, channel_id):
         playlist_items_response = youtube.playlistItems().list(
             part='snippet',
             playlistId=uploads_playlist_id,
-            maxResults=50,  # Max allowed by API
+            maxResults=10,  # Max allowed by API
             pageToken=next_page_token
         ).execute()
 
@@ -122,7 +124,7 @@ def get_all_videos(credentials, channel_id):
             'video_id': item['snippet']['resourceId']['videoId'],
             'video_title': item['snippet']['title'],
             'video_description': item['snippet']['description'],
-            'published_at': item['snippet']['publishedAt'],
+            'published_at': datetime.fromisoformat(item['snippet']['publishedAt']).strftime("%Y-%m-%d %H:%M:%S"),
             'thumbnail_url': item['snippet']['thumbnails']['default']['url'],
             'channel_name': item['snippet']['channelTitle'],
             'channel_id': channel_id,
@@ -686,7 +688,7 @@ def insights_top_video():
         dimensions='video',
         sort='-'+ metrics,
         maxResults=10,
-        filters='continent=142'
+        # filters='continent=142'
     ).execute()
     data = [{'video_id':i[0],metrics:i[1]} for i in response['rows']]
     video_ids = [i[0] for i in response['rows']]
@@ -717,6 +719,8 @@ def channel_video_list():
     # Fetch all videos
     videos = get_all_videos(credentials, channel_id)
     for video in videos:
+        if YoutubeVideoData.query.filter(YoutubeVideoData.video_id == video['video_id']).first():
+            continue
         new_video = YoutubeVideoData(
             video_id = video['video_id'],
             video_title = video['video_title'],
@@ -729,6 +733,7 @@ def channel_video_list():
         )
         db.session.add(new_video)
         db.session.commit()
+        
     paginated_data = videos[start_index:end_index]
 
     # return jsonify(videos)
