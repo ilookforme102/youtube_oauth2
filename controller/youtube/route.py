@@ -720,21 +720,101 @@ def get_demension_metric_stats():
         endDate=end_date,
         metrics=metrics,
         dimensions=dimensions,
+        filters='video==wdF1mYxG5eA',
         # sort='day,-views'
         # filters='province==US-CA'
         # filters='continent=142'
     ).execute()
     data =  response['rows']
-    # video_ids = [i[0] for i in response['rows']]
-    # video_titles = get_video_titles(credentials, video_ids)
-    # for i in range(0,len(data)):
-    #     data[i]['video_title'] = video_titles[data[i]['video_id']]
-    # list_metric = [metric for metric in list(metrics)]
-    # rows = response['rows']
-    # dates = [i[0] for i in rows]
-    # metric_data = {metric:[i[list_metric.index(metric) +1] for i in rows] for  metric in list_metric}
-    # metric_data['date'] = dates
     return jsonify(data)
+@yt_bp.route('/insights/video_details')
+def get_video_details():
+    today = datetime.now().strftime('%Y-%m-%d')
+    data = request.args
+    video_id =  data.get('video_id')
+    channel_name = data.get('channel_name')
+    metrics = data.get('metrics')
+    list_metrics = [
+    #passed
+    'views',
+    'likes',
+    'dislikes',
+    'shares',
+    'comments',
+    'subscribersGained',
+    'subscribersLost',
+    'videosAddedToPlaylists',
+    'videosRemovedFromPlaylists',
+    'averageViewDuration',
+    'averageViewPercentage',
+    'annotationImpressions',
+    'annotationClicks',
+    'annotationCloses',
+    'annotationClickThroughRate',
+    'annotationCloseRate',
+    'estimatedMinutesWatched',
+    'cardClickRate',
+    'cardTeaserClickRate',
+    'cardImpressions',
+    'cardTeaserImpressions',
+    'cardClicks',
+    'cardTeaserClicks',
+    'averageViewPercentage',
+    'averageViewDuration',
+    
+    #failed
+    # 'estimatedRevenue',
+    # 'adImpressions',
+    # 'monetizedPlaybacks',
+    # 'viewerPercentage'
+
+    #testing
+    '' 
+    
+]#data.get('metrics')  # specify the metrics you want
+    metric = ','.join(list_metrics)
+    dimensions = str(data.get('dimensions'))
+    start_date = data.get('start_date',today)
+    end_date = data.get('end_date',today)
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    youtubeAnalytics = build('youtubeAnalytics', 'v2', credentials=credentials)
+    response = youtubeAnalytics.reports().query(
+        ids=f'channel=={channel_id}',
+        startDate=start_date,
+        endDate=end_date,
+        metrics=metrics,
+        dimensions= dimensions,
+        filters=f'video=={video_id}',
+    ).execute()
+    data =  response['rows']
+    return jsonify(response)
+#get distribution of watcher along the length of video
+#performance of a video compare with other video at the same lenght
+@yt_bp.route('/insights/elapsed_video_time_ratio')
+def get_elapsed_video_time_ratio():
+    today = datetime.now().strftime('%Y-%m-%d')
+    data = request.args
+    video_id =  data.get('video_id')
+    channel_name = data.get('channel_name')
+    dimensions = str(data.get('dimensions'))
+    start_date = data.get('start_date',today)
+    end_date = data.get('end_date',today)
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    youtubeAnalytics = build('youtubeAnalytics', 'v2', credentials=credentials)
+    response = youtubeAnalytics.reports().query(
+        ids=f'channel=={channel_id}',
+        startDate=start_date,
+        endDate=end_date,
+        metrics='audienceWatchRatio,relativeRetentionPerformance',
+        dimensions= dimensions,
+        filters=f'video=={video_id}',
+    ).execute()
+    data =  response['rows']
+    return jsonify(response)
 ###########################################################################################
 ###insert video to video table 
 @yt_bp.route('/insights/channel_video_list')

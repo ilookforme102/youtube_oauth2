@@ -15,8 +15,9 @@ click on the channel name, show detail stats
 /insights/view_ratio_by_gender
 /insights/top_video
 /insights/get_channel_video_list
-
-
+/insights/demension_metric_stats ( get by pair demension and metric)
+/insights/video_details
+/insights/elapsed_video_time_ratio (measure retention rate of a video)
 
 
 
