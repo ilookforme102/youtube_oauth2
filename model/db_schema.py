@@ -102,6 +102,6 @@ class User(db.Model):
     password = db.Column(db.String(255), nullable = False)
     company_name = db.Column(db.String(255), nullable = False)
     company_id = db.Column(db.String(255), nullable = False, unique = True)
-    is_active = db.Column(db.Boolean, default = True)
+    is_active = db.Column(db.Integer, default = True)
     role = db.Column(db.String(255), nullable = False)
     team = db.Column(db.String(255), nullable = False)

@@ -450,6 +450,19 @@ def get_list_channel_name():
     ).all()
     data = [result.channel_name for result in results]
     return jsonify(data)
+@yt_bp.route('/edit_list_channel/<string:channel_id>', methods=['PUT','OPTIONS'])
+def edit_list_channel(channel_id):
+    data = request.form
+    person_in_charge = data.get('person_in_charge')
+    
+    # Update the person_in_charge column in the database
+    youtube_data = YoutubeData.query.filter(YoutubeData.channel_id==channel_id).first()
+    if youtube_data:
+        youtube_data.person_in_charge = person_in_charge
+        db.session.commit()
+        return jsonify({'message': 'Person in charge updated successfully'})
+    else:
+        return jsonify({'message': 'Channel not found'})
 # def get_refresh_tokens():
 #     data = request.args
 #     channel_name = data.get("channel_name")
@@ -887,25 +900,6 @@ def get_channel_video_list():
 
     # return jsonify(videos)
     return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(data)})
-@yt_bp.route('/stats/')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ################################################################################
 # def get_channel_video_list():
@@ -951,8 +945,6 @@ def get_channel_video_list():
     #     if next_page_token == False:
     #         break
     # return jsonify(response)
-
-
 
 
 ###################################################################

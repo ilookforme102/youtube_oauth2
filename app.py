@@ -9,6 +9,8 @@ from controller.user.route import user_bp
 from controller.data_table.route import data_table_bp
 from model.db_schema import YoutubeChannel,GoogleAccount, FacebookAccount, FacebookPage
 from config import app, db
+# from flask_session import Session
+# Session(app)
 CORS(app, supports_credentials= True)
 app.register_blueprint(data_table_bp)
 app.register_blueprint(fb_bp)

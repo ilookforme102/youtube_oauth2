@@ -3,6 +3,7 @@
 /youtube
 /youtbe/authorize
 /youtbe/insights
+/youtube/edit_list_channel/<string:channel_id> form person_in_charge: shang, harrison
 /youtube/list_channel [GET,DELeTE]  
 /youtube/insights/subscribe 
 /youtube/insights/views
