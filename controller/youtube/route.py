@@ -802,7 +802,7 @@ def get_video_details():
         filters=f'video=={video_id}',
     ).execute()
     data =  response['rows']
-    return jsonify(response)
+    return jsonify(data)
 #get distribution of watcher along the length of video
 #performance of a video compare with other video at the same lenght
 @yt_bp.route('/insights/elapsed_video_time_ratio')
