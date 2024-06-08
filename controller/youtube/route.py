@@ -907,8 +907,8 @@ def channel_video_list():
     return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(videos)})
 ############################################################################
 ##########Sentiment Analysis################################################
-@yt_bp.route('/insights/video_sentiment')
-def video_sentiment():
+@yt_bp.route('/insights/video_analysis')
+def video_analysis():
     data = request.args
     video_id =  data.get('video_id')
     # channel_name = data.get('channel_name')
@@ -919,6 +919,9 @@ def video_sentiment():
     # credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
     developerKey = 'AIzaSyDnlnky7konGevRlfLfXQN50K3MlNUbE3c'
     comments = get_video_comments(developerKey = developerKey,video_id= video_id)
+    offensives = 0
+    spams =  0
+    positives = 0
     comment_list = []
     for comment in comments:
         first_layer_comment = comment_classification(comment['comment'])
@@ -926,8 +929,32 @@ def video_sentiment():
         for reply in comment['replies']:
             reply_content = comment_classification(reply)
             comment_list.append(reply_content)
+    for i in comment_list:
+        if i['is_offensive'] == True:
+            positives +=1
+        if i['is_spam'] == True:
+            spam +=1
+        if i['sentiment'] == 'positive':
+            positives +=1
 
-    return jsonify(comment_list)
+    percent_offensives = offensives/len(comment_list) if len(comment_list) > 0 else 0
+    percent_spams = spams/len(comment_list) if len(comment_list) > 0 else 0
+    percent_positives = positives/len(comment_list) if len(comment_list) > 0 else 0
+    data = {
+        'content':comment_list,
+        'analysis': {
+            'offensive': {
+                'is_offensive':100*percent_offensives
+            },
+            'spam': {
+                'is_spam': 100*percent_spams
+            },
+            'sentiment':{
+                'positive':100*percent_positives
+            }
+        }
+    }
+    return jsonify(data),200
 
 ####Get video from database
 @yt_bp.route('/insights/get_channel_video_list')
