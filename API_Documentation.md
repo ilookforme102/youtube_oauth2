@@ -30,3 +30,6 @@ click on the channel name, show detail stats
 /youtube/metrics/<sub metrics>
 user/login
 user/logout
+user/create_user <form request>
+user/delete_user/<string:username>
+user/get_all_users?page=1&per_page=2
