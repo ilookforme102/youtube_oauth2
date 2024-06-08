@@ -1,5 +1,7 @@
 from flask import Flask, jsonify, request, session, make_response,redirect, url_for,Blueprint
 from datetime import datetime, timedelta,time
+from sqlalchemy import Date,Time,DateTime , and_, func, case
+
 from config import app, db
 from model.db_schema import User
 from flask import request
@@ -37,20 +39,14 @@ def get_all_users():
     """
     page = request.args.get('page', type=int)
     per_page = request.args.get('per_page', type=int)
+    users_total =   User.query.with_entities(func.count(User.id)).scalar()
 
     users = User.query.paginate(page=page, per_page=per_page)
     user_data = [{'username': user.username, 'password': user.password, 'role': user.role, 'company_name': user.company_name, 'company_id': user.company_id, 'team': user.team, 'is_active': user.is_active} for user in users.items]
     if page > users.pages:
         return jsonify({'error': 'Invalid page number'}), 400
     else:
-        return jsonify({'items': user_data, 'per_page': users.per_page, 'page': users.page,'total_items':users.pages}), 200
-    # if 'username' not in session or session['role'] != 'admin':
-    #     return jsonify({'error': 'Permission required!'}), 403
-
-    # users = User.query.all()
-    # user_data = [{'username': user.username,'password': user.password, 'role': user.role, 'company_name': user.company_name, 'company_id': user.company_id, 'team': user.team, 'is_active': user.is_active} for user in users]
-
-    # return jsonify({'users': user_data}), 200
+        return jsonify({'items': user_data, 'per_page': users.per_page, 'page': users.page,'total_items': users_total}), 200
 @user_bp.route('/create_user', methods=['POST'])
 def create_user():
     """
