@@ -977,7 +977,7 @@ def test():
     # end_date = datetime.date.today().isoformat()
     return {'date':session['username']}
 #SELECT * FROM `db_gg_channel` as c INNER JOIN `db_gg_user` u ON c.owner_id = u.user_id WHERE channel_name = "Shang Uchiha";
-    return end_date
+    # return end_date
 @yt_bp.route('/get_channel_insights')
 def get_channel_insights():
     channel_name = "Shang Uchiha"
