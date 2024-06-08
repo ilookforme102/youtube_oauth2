@@ -74,7 +74,8 @@ SCOPES = [
     'https://www.googleapis.com/auth/youtube.readonly',  # To access YouTube channel data
     'https://www.googleapis.com/auth/userinfo.email',    # To access the user's email address
     'https://www.googleapis.com/auth/userinfo.profile' ,  # To access the user's profile information, including ID
-    'https://www.googleapis.com/auth/yt-analytics.readonly'
+    'https://www.googleapis.com/auth/yt-analytics.readonly',
+    'https://www.googleapis.com/auth/youtube.force-ssl'
 ]
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # ONLY for development
 os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
@@ -99,7 +100,7 @@ def session_to_credentials(session):
         client_secret=session['client_secret'],
         scopes=session['scopes'])
 def get_all_videos(credentials, channel_id):
-    result = db.session.query()
+    # result = db.session.query()
     youtube = build('youtube', 'v3', credentials=credentials)
 
     # Fetch the channel's details to get the uploads playlist ID
@@ -135,6 +136,24 @@ def get_all_videos(credentials, channel_id):
             break
 
     return videos
+def get_video_comments(developerKey, video_id):
+    youtube = build('youtube', 'v3', developerKey= developerKey)
+    comments = []
+    next_page_token = None
+    while True:
+        video_resonse = youtube.commentThreads().list(
+            part="snippet,replies",
+            maxResults = 50,
+            videoId = video_id,
+            pageToken = next_page_token
+        ).execute()
+        comments += [{
+            'comment': item['snippet']['topLevelComment']['snippet']['textDisplay'],
+            'replies': [i['snippet']['textDisplay'] for i in  item['replies']['comments']],
+        } for item in video_resonse['items']]
+        next_page_token = video_resonse.get('nextPageToken')
+        if not next_page_token:
+            break
 
 
 @yt_bp.route('/')
@@ -867,34 +886,18 @@ def channel_video_list():
     return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(videos)})
 ############################################################################
 ##########Sentiment Analysis################################################
-@yt_bp.route('/insights/get_all_comments')
-def get_video_comments():
+@yt_bp.route('/insights/video_sentiment')
+def video_sentiment():
     data = request.args
     video_id =  data.get('video_id')
     channel_name = data.get('channel_name')
     # Get the credentials from session
     
-    refresh_token, channel_id = get_refresh_token(channel_name)
-    temp_access_token = access_token_generate(refresh_token)
-    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
-
-    
-    # Build the YouTube service object
-    youtube = build('youtube', 'v3', credentials=credentials)
-    
-    # Request the comments for the specified video
-    req = youtube.commentThreads().list(
-        part='snippet',
-        videoId=video_id,
-        maxResults=100
-    )
-    response = req.execute()
-    
-    # Extract the comments from the response
-    comments = []
-    for item in response.get('items', []):
-        comment = item['snippet']['topLevelComment']['snippet']['textDisplay']
-        comments.append(comment)
+    # refresh_token, _ = get_refresh_token(channel_name)
+    # temp_access_token = access_token_generate(refresh_token)
+    # credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    developerKey = 'AIzaSyDnlnky7konGevRlfLfXQN50K3MlNUbE3c'
+    comments = get_video_comments(developerKey, video_id)
     
     return jsonify(comments)
 
