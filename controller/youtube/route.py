@@ -14,6 +14,7 @@ import requests
 import pymysql
 import os
 from dotenv import load_dotenv
+import re
 load_dotenv()
 #############################
 # db_username = 'vn168_soc'
@@ -143,19 +144,39 @@ def get_video_comments(developerKey, video_id):
     while True:
         video_resonse = youtube.commentThreads().list(
             part="snippet,replies",
-            maxResults = 50,
-            videoId = video_id,
-            pageToken = next_page_token
+            maxResults=20,
+            videoId=video_id,
+            pageToken=next_page_token
         ).execute()
         comments += [{
             'comment': item['snippet']['topLevelComment']['snippet']['textDisplay'],
-            'replies': [i['snippet']['textDisplay'] for i in  item['replies']['comments']],
+            'replies': [i['snippet']['textDisplay'] for i in item['replies']['comments']] if 'replies' in item else [],
         } for item in video_resonse['items']]
         next_page_token = video_resonse.get('nextPageToken')
         if not next_page_token:
             break
-
-
+    return comments
+def sentiment_classification(text):
+    if len(text) >= 0:
+        return 'Negative'
+    else:
+        return 'Positive'
+def comment_classification(text):
+    is_offensive = False
+    is_spam = False
+    # Define a list of Vietnamese bad words
+    bad_words = ['buồi','buoi','dau buoi','daubuoi','caidaubuoi','nhucaidaubuoi','dau boi','bòi','dauboi','caidauboi','đầu bòy','đầu bùi','dau boy','dauboy','caidauboy','b`','cặc','cak','kak','kac','cac','concak','nungcak','bucak','caiconcac','caiconcak','cu','cặk','cak','dái','giái','zái','kiu','cứt','cuccut','cutcut','cứk','cuk','cười ỉa','cười ẻ','đéo','đếch','đếk','dek','đết','đệt','đách','dech',"đ'",'deo','d','đel','đél','del','dell ngửi','dell ngui','dell chịu','dell chiu','dell hiểu','dell hieu','dellhieukieugi','dell nói','dell noi','dellnoinhieu','dell biết','dell biet','dell nghe','dell ăn','dell an','dell được','dell duoc','dell làm','dell lam','dell đi','dell di','dell chạy','dell chay','deohieukieugi','địt','đm','dm','đmm','dmm','đmmm','dmmm','đmmmm','dmmmm','đmmmmm','dmmmmm','đcm','dcm','đcmm','dcmm','đcmmm','dcmmm','đcmmmm','dcmmmm','đệch','đệt','dit','dis','diz','đjt','djt','địt mẹ','địt mịe','địt má','địt mía','địt ba','địt bà','địt cha','địt con','địt bố','địt cụ','dis me','disme','dismje','dismia','dis mia','dis mie','đis mịa','đis mịe','ditmemayconcho','ditmemay','ditmethangoccho','ditmeconcho','dmconcho','dmcs','ditmecondi','ditmecondicho','đụ','đụ mẹ','đụ mịa','đụ mịe','đụ má','đụ cha','đụ bà','đú cha','đú con mẹ','đú má','đú mẹ','đù cha','đù má','đù mẹ','đù mịe','đù mịa','đủ cha','đủ má','đủ mẹ','đủ mé','đủ mía','đủ mịa','đủ mịe','đủ mie','đủ mia','đìu','đờ mờ','đê mờ','đờ ma ma','đờ mama','đê mama','đề mama','đê ma ma','đề ma ma','dou','doma','duoma','dou má','duo má','dou ma','đou má','đìu má','á đù','á đìu','đậu mẹ','đậu má','đĩ','di~','đuỹ','điếm','cđĩ','cdi~','đilol','điloz','đilon','diloz','dilol','dilon','condi','condi~','dime','di me','dimemay','condime','condimay','condimemay','con di cho','con di cho','condicho','bitch','biz','bít chi','con bích','con bic','con bíc','con bít','phò','4`','lồn','l`','loz','lìn','nulo','ml','matlon','cailon','matlol','matloz','thml','thangmatlon','thangml','đỗn lì','tml','thml','diml','dml','hãm','xàm lol','xam lol','xạo lol','xao lol','con lol','ăn lol','an lol','mát lol','mat lol','cái lol','cai lol','lòi lol','loi lol','ham lol','củ lol','cu lol','ngu lol','tuổi lol','tuoi lol','mõm lol','mồm lol','mom lol','như lol','nhu lol','nứng lol','nung lol','nug lol','nuglol','rảnh lol','ranh lol','đách lol','dach lol','mu lol','banh lol','tét lol','tet lol','vạch lol','vach lol','cào lol','cao lol','tung lol','mặt lol','mát lol','mat lol','xàm lon','xam lon','xạo lon','xao lon','con lon','ăn lon','an lon','mát lon','mat lon','cái lon','cai lon','lòi lon','loi lon','ham lon','củ lon','cu lon','ngu lon','tuổi lon','tuoi lon','mõm lon','mồm lon','mom lon','như lon','nhu lon','nứng lon','nung lon','nug lon','nuglon','rảnh lon','ranh lon','đách lon','dach lon','mu lon','banh lon','tét lon','tet lon','vạch lon','vach lon','cào lon','cao lon','tung lon','mặt lon','mát lon','mat lon','cái lờ','cl','clgt','cờ lờ gờ tờ','cái lề gì thốn','đốn cửa lòng','sml','sapmatlol','sapmatlon','sapmatloz','sấp mặt','sap mat','vlon','vloz','vlol','vailon','vai lon','vai lol','vailol','nốn lừng','vcl','vl','vleu','chịch','chich','vãi','v~','đụ','nứng','nug','đút đít','chổng mông','banh háng','xéo háng','xhct','xephinh','la liếm','đổ vỏ','xoạc','xoac','chich choac','húp sò','fuck','fck','đụ','bỏ bú','buscu','ngu','óc chó','occho','lao cho','láo chó','bố láo','chó má','cờ hó','sảng','thằng chó','thang cho','thang cho','chó điên','thằng điên','thang dien','đồ điên','sủa bậy','sủa tiếp','sủa đi','sủa càn','mẹ bà','mẹ cha mày','me cha may','mẹ cha anh','mẹ cha nhà anh','mẹ cha nhà mày','me cha nha may','mả cha mày','mả cha nhà mày','ma cha may','ma cha nha may','mả mẹ','mả cha','kệ mẹ','kệ mịe','kệ mịa','kệ mje','kệ mja','ke me','ke mie','ke mia','ke mja','ke mje','bỏ mẹ','bỏ mịa','bỏ mịe','bỏ mja','bỏ mje','bo me','bo mia','bo mie','bo mje','bo mja','chetme','chet me','chết mẹ','chết mịa','chết mja','chết mịe','chết mie','chet mia','chet mie','chet mja','chet mje','thấy mẹ','thấy mịe','thấy mịa','thay me','thay mie','thay mia','tổ cha','bà cha mày','cmn','cmnl','tiên sư nhà mày','tiên sư bố','tổ sư']  
+    # Define a regular expression pattern to match Vietnamese spam URLs
+    url_pattern = r'(https?://)?(www\.)?([a-zA-Z0-9]+(-[a-zA-Z0-9]+)*\.)+[a-zA-Z]{2,}(/(\S+)*)?'
+    if re.search(url_pattern, text):
+       is_spam = True
+    else:
+       is_spam = False
+    # Remove bad words
+    is_offensive = any(word in text.lower() for word in bad_words)
+    sentiment_class = sentiment_classification(text)
+    result = {'content':text,'is_spam': is_spam,'is_offensive':is_offensive,'sentiment': sentiment_class}
+    return  result
 @yt_bp.route('/')
 def index():
     # Check if the user is authenticated
@@ -890,16 +911,23 @@ def channel_video_list():
 def video_sentiment():
     data = request.args
     video_id =  data.get('video_id')
-    channel_name = data.get('channel_name')
+    # channel_name = data.get('channel_name')
     # Get the credentials from session
     
     # refresh_token, _ = get_refresh_token(channel_name)
     # temp_access_token = access_token_generate(refresh_token)
     # credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
     developerKey = 'AIzaSyDnlnky7konGevRlfLfXQN50K3MlNUbE3c'
-    comments = get_video_comments(developerKey, video_id)
-    
-    return jsonify(comments)
+    comments = get_video_comments(developerKey = developerKey,video_id= video_id)
+    comment_list = []
+    for comment in comments:
+        first_layer_comment = comment_classification(comment['comment'])
+        comment_list.append(first_layer_comment)
+        for reply in comment['replies']:
+            reply_content = comment_classification(reply)
+            comment_list.append(reply_content)
+
+    return jsonify(comment_list)
 
 ####Get video from database
 @yt_bp.route('/insights/get_channel_video_list')

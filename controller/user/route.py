@@ -43,7 +43,7 @@ def get_all_users():
     if page > users.pages:
         return jsonify({'error': 'Invalid page number'}), 400
     else:
-        return jsonify({'items': user_data, 'per_page': users.per_page, 'page': users.page}), 200
+        return jsonify({'items': user_data, 'per_page': users.per_page, 'page': users.page,'total_page':users.pages}), 200
     # if 'username' not in session or session['role'] != 'admin':
     #     return jsonify({'error': 'Permission required!'}), 403
 
