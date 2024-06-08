@@ -865,6 +865,39 @@ def channel_video_list():
 
     # return jsonify(videos)
     return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(videos)})
+############################################################################
+##########Sentiment Analysis################################################
+@yt_bp.route('/insights/get_all_comments')
+def get_video_comments():
+    data = request.args
+    video_id =  data.get('video_id')
+    channel_name = data.get('channel_name')
+    # Get the credentials from session
+    
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+
+    
+    # Build the YouTube service object
+    youtube = build('youtube', 'v3', credentials=credentials)
+    
+    # Request the comments for the specified video
+    req = youtube.commentThreads().list(
+        part='snippet',
+        videoId=video_id,
+        maxResults=100
+    )
+    response = req.execute()
+    
+    # Extract the comments from the response
+    comments = []
+    for item in response.get('items', []):
+        comment = item['snippet']['topLevelComment']['snippet']['textDisplay']
+        comments.append(comment)
+    
+    return jsonify(comments)
+
 ####Get video from database
 @yt_bp.route('/insights/get_channel_video_list')
 def get_channel_video_list():
@@ -902,49 +935,6 @@ def get_channel_video_list():
     return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(data)})
 
 ################################################################################
-# def get_channel_video_list():
-#     data = request.args
-#     channel_name = data.get('channel_name')
-#     # metrics = str(data.get('metrics'))
-#     refresh_token, channel_id = get_refresh_token(channel_name)
-#     temp_access_token = access_token_generate(refresh_token)
-#     credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
-#     youtube = build('youtube', 'v3', credentials=credentials)
-#     next_page_token  = None
-#     video_list = []
-#     response = youtube.search().list(
-#             part="snippet",
-#             channelId=channel_id,
-#             maxResults=25,
-#             type="video",
-#             order = 'viewCount',
-#             pageToken = next_page_token
-#         ).execute()
-    # while True:
-    #     response = youtube.search().list(
-    #         part="snippet",
-    #         channelId=channel_id,
-    #         maxResults=25,
-    #         type="video",
-    #         # nextPageToken = next_page_token
-    #     ).execute()
-    #     videos = response['items']
-    #     for video in videos:
-    #         video_id = video['id']['videoId']
-    #         video_scription = video['snippet']['description']
-    #         video_published_at = video['snippet']['publishedAt']
-    #         video_thubnail = video['snippet']['thumbnails']['default']
-    #         video_title = video['snippet']['title']
-    #     next_page_token = response['nextPageToken']
-    #     video_list.append({'video_id':video_id,
-    #                        'video_scription':video_scription,
-    #                        'video_published_at':video_published_at,
-    #                        'video_thubnail':video_thubnail,
-    #                        'video_title':video_title})
-    #     print(video_title)
-    #     if next_page_token == False:
-    #         break
-    # return jsonify(response)
 
 
 ###################################################################

@@ -9,6 +9,22 @@ from model.db_schema import User
 #     user_role =  data[0]['role']
 #     return username
 user_bp = Blueprint('user_bp', __name__, url_prefix='/user')
+@user_bp.route('/get_user_name_list', methods=['GET'])
+def get_all_names():
+    """
+    Retrieves all users from the User table.
+
+    Returns:
+        If the retrieval is successful, returns a JSON response with the user information and a status code of 200.
+        If the retrieval fails, returns a JSON response with an error message and a status code of 500.
+    """
+    if 'username' not in session or session['role'] != 'admin':
+        return jsonify({'error': 'Permission required!'}), 403
+
+    users = User.query.all()
+    user_data = [user.username for user in users]
+    
+    return jsonify(user_data), 200
 @user_bp.route('/get_all_users', methods=['GET'])
 def get_all_users():
     """
@@ -23,7 +39,7 @@ def get_all_users():
 
     users = User.query.all()
     user_data = [{'username': user.username,'password': user.password, 'role': user.role, 'company_name': user.company_name, 'company_id': user.company_id, 'team': user.team, 'is_active': user.is_active} for user in users]
-    
+
     return jsonify({'users': user_data}), 200
 @user_bp.route('/create_user', methods=['POST'])
 def create_user():
