@@ -5,7 +5,7 @@ from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from model.db_schema import app, db, User,YoutubeVideoDataDetails, GoogleAccount, YoutubeChannel,YoutubeData, FacebookAccount,YoutubeVideoData, FacebookPage
-from controller.youtube.service import credentials_to_dict,session_to_credentials, load_client_credentials,get_refresh_token,access_token_generate,credentials_generate,get_video_titles,get_all_videos,get_video_comments,comment_classification,get_5goal_news_video_stats,get_all_video_ids_5goalnews
+from controller.youtube.service import credentials_to_dict,session_to_credentials, load_client_credentials,get_refresh_token,access_token_generate,credentials_generate,get_video_titles,get_all_videos,get_video_comments,comment_classification,get_5goal_news_video_stats,get_all_video_ids_5goalnews, get_all_name
 from sqlalchemy import Date,Time,DateTime , and_, func, case
       
 import datetime
@@ -930,99 +930,104 @@ def get_video_stats():
 #######################Personal Report#################################
 @yt_bp.route('/report/personal_report')
 def get_personal_report():
+    names = get_all_name()
+   
     data = request.args
-    user_name =data.get('user_name')
+    
     start_date =  data.get('start_date')
     end_date = data.get('end_date')
-    results = db.session.query(
-        func.sum(YoutubeVideoDataDetails.views).label('views'),
-        func.sum(YoutubeVideoDataDetails.likes).label('likes'),
-        func.sum(YoutubeVideoDataDetails.dislikes).label('dislikes'),
-        func.sum(YoutubeVideoDataDetails.shares).label('shares'),
-        func.sum(YoutubeVideoDataDetails.comments).label('comments'),
-        func.sum(YoutubeVideoDataDetails.subscribersGained).label('subscribersGained'),
-        func.sum(YoutubeVideoDataDetails.subscribersLost).label('subscribersLost'),
-        func.sum(YoutubeVideoDataDetails.videosAddedToPlaylists).label('videosAddedToPlaylists'),
-        func.sum(YoutubeVideoDataDetails.videosRemovedFromPlaylists).label('videosRemovedFromPlaylists'),
-        func.sum(YoutubeVideoDataDetails.averageViewDuration).label('averageViewDuration'),
-        func.sum(YoutubeVideoDataDetails.averageViewPercentage).label('averageViewPercentage'),
-        func.sum(YoutubeVideoDataDetails.annotationImpressions).label('annotationImpressions'),
-        func.sum(YoutubeVideoDataDetails.annotationClicks).label('annotationClicks'),
-        func.sum(YoutubeVideoDataDetails.annotationCloses).label('annotationCloses'),
-        func.sum(YoutubeVideoDataDetails.annotationClickThroughRate).label('annotationClickThroughRate'),
-        func.sum(YoutubeVideoDataDetails.annotationCloseRate).label('annotationCloseRate'),
-        func.sum(YoutubeVideoDataDetails.estimatedMinutesWatched).label('estimatedMinutesWatched'),
-        func.sum(YoutubeVideoDataDetails.cardClickRate).label('cardClickRate'),
-        func.sum(YoutubeVideoDataDetails.cardTeaserClickRate).label('cardTeaserClickRate'),
-        func.sum(YoutubeVideoDataDetails.cardImpressions).label('cardImpressions'),
-        func.sum(YoutubeVideoDataDetails.cardTeaserImpressions).label('cardTeaserImpressions'),
-        func.sum(YoutubeVideoDataDetails.cardClicks).label('cardClicks'),
-        func.sum(YoutubeVideoDataDetails.cardTeaserClicks).label('cardTeaserClicks')
-       
-        # YoutubeVideoDataDetails.video_id,
-        # YoutubeVideoDataDetails.checked_date,
-        # YoutubeVideoDataDetails.views,
-        # YoutubeVideoDataDetails.likes,
-        # YoutubeVideoDataDetails.dislikes,
-        # YoutubeVideoDataDetails.shares,
-        # YoutubeVideoDataDetails.comments,
-        # YoutubeVideoDataDetails.subscribersGained,
-        # YoutubeVideoDataDetails.subscribersLost,
-        # YoutubeVideoDataDetails.videosAddedToPlaylists,
-        # YoutubeVideoDataDetails.videosRemovedFromPlaylists,
-        # YoutubeVideoDataDetails.averageViewDuration,
-        # YoutubeVideoDataDetails.averageViewPercentage,
-        # YoutubeVideoDataDetails.annotationImpressions,
-        # YoutubeVideoDataDetails.annotationClicks,
-        # YoutubeVideoDataDetails.annotationCloses,
-        # YoutubeVideoDataDetails.annotationClickThroughRate,
-        # YoutubeVideoDataDetails.annotationCloseRate,
-        # YoutubeVideoDataDetails.estimatedMinutesWatched,
-        # YoutubeVideoDataDetails.cardClickRate,
-        # YoutubeVideoDataDetails.cardTeaserClickRate,
-        # YoutubeVideoDataDetails.cardImpressions,
-        # YoutubeVideoDataDetails.cardTeaserImpressions,
-        # YoutubeVideoDataDetails.cardClicks,
-        # YoutubeVideoDataDetails.cardTeaserClicks,
-        # YoutubeVideoDataDetails.averageViewPercentage,
-        # YoutubeVideoDataDetails.averageViewDuration,
-        # YoutubeData.person_in_charge
-    ).join(
-        YoutubeVideoData, YoutubeVideoDataDetails.video_id == YoutubeVideoData.video_id
-    ).join(
-        YoutubeData, YoutubeVideoData.channel_id == YoutubeData.channel_id
-    ).filter(
-        and_(
-            YoutubeVideoDataDetails.checked_date >= start_date,
-            YoutubeVideoDataDetails.checked_date <= end_date,
-            YoutubeData.person_in_charge.like('%{}%'.format(user_name))#('%{}%'.format(user_name))
-        )
-    ).all()
-    data = [{'views': result.views,
-            'likes': result.likes,
-            'dislikes': result.dislikes,
-            'shares': result.shares,
-            'comments': result.comments,
-            'subscribersGained': result.subscribersGained,
-            'subscribersLost': result.subscribersLost,
-            'videosAddedToPlaylists': result.videosAddedToPlaylists,
-            'videosRemovedFromPlaylists': result.videosRemovedFromPlaylists,
-            'averageViewDuration': result.averageViewDuration,
-            'averageViewPercentage': result.averageViewPercentage,
-            'annotationImpressions': result.annotationImpressions,
-            'annotationClicks': result.annotationClicks,
-            'annotationCloses': result.annotationCloses,
-            'annotationClickThroughRate': result.annotationClickThroughRate,
-            'annotationCloseRate': result.annotationCloseRate,
-            'estimatedMinutesWatched': result.estimatedMinutesWatched,
-            'cardClickRate': result.cardClickRate,
-            'cardTeaserClickRate': result.cardTeaserClickRate,
-            'cardImpressions': result.cardImpressions,
-            'cardTeaserImpressions': result.cardTeaserImpressions,
-            'cardClicks': result.cardClicks,
-            'cardTeaserClicks': result.cardTeaserClicks
-             } for result in results]
-    return data
+    report_data = {}
+    for name in names:
+        results = db.session.query(
+            func.sum(YoutubeVideoDataDetails.views).label('views'),
+            func.sum(YoutubeVideoDataDetails.likes).label('likes'),
+            func.sum(YoutubeVideoDataDetails.dislikes).label('dislikes'),
+            func.sum(YoutubeVideoDataDetails.shares).label('shares'),
+            func.sum(YoutubeVideoDataDetails.comments).label('comments'),
+            func.sum(YoutubeVideoDataDetails.subscribersGained).label('subscribersGained'),
+            func.sum(YoutubeVideoDataDetails.subscribersLost).label('subscribersLost'),
+            func.sum(YoutubeVideoDataDetails.videosAddedToPlaylists).label('videosAddedToPlaylists'),
+            func.sum(YoutubeVideoDataDetails.videosRemovedFromPlaylists).label('videosRemovedFromPlaylists'),
+            func.sum(YoutubeVideoDataDetails.averageViewDuration).label('averageViewDuration'),
+            func.sum(YoutubeVideoDataDetails.averageViewPercentage).label('averageViewPercentage'),
+            func.sum(YoutubeVideoDataDetails.annotationImpressions).label('annotationImpressions'),
+            func.sum(YoutubeVideoDataDetails.annotationClicks).label('annotationClicks'),
+            func.sum(YoutubeVideoDataDetails.annotationCloses).label('annotationCloses'),
+            func.sum(YoutubeVideoDataDetails.annotationClickThroughRate).label('annotationClickThroughRate'),
+            func.sum(YoutubeVideoDataDetails.annotationCloseRate).label('annotationCloseRate'),
+            func.sum(YoutubeVideoDataDetails.estimatedMinutesWatched).label('estimatedMinutesWatched'),
+            func.sum(YoutubeVideoDataDetails.cardClickRate).label('cardClickRate'),
+            func.sum(YoutubeVideoDataDetails.cardTeaserClickRate).label('cardTeaserClickRate'),
+            func.sum(YoutubeVideoDataDetails.cardImpressions).label('cardImpressions'),
+            func.sum(YoutubeVideoDataDetails.cardTeaserImpressions).label('cardTeaserImpressions'),
+            func.sum(YoutubeVideoDataDetails.cardClicks).label('cardClicks'),
+            func.sum(YoutubeVideoDataDetails.cardTeaserClicks).label('cardTeaserClicks')
+        
+            # YoutubeVideoDataDetails.video_id,
+            # YoutubeVideoDataDetails.checked_date,
+            # YoutubeVideoDataDetails.views,
+            # YoutubeVideoDataDetails.likes,
+            # YoutubeVideoDataDetails.dislikes,
+            # YoutubeVideoDataDetails.shares,
+            # YoutubeVideoDataDetails.comments,
+            # YoutubeVideoDataDetails.subscribersGained,
+            # YoutubeVideoDataDetails.subscribersLost,
+            # YoutubeVideoDataDetails.videosAddedToPlaylists,
+            # YoutubeVideoDataDetails.videosRemovedFromPlaylists,
+            # YoutubeVideoDataDetails.averageViewDuration,
+            # YoutubeVideoDataDetails.averageViewPercentage,
+            # YoutubeVideoDataDetails.annotationImpressions,
+            # YoutubeVideoDataDetails.annotationClicks,
+            # YoutubeVideoDataDetails.annotationCloses,
+            # YoutubeVideoDataDetails.annotationClickThroughRate,
+            # YoutubeVideoDataDetails.annotationCloseRate,
+            # YoutubeVideoDataDetails.estimatedMinutesWatched,
+            # YoutubeVideoDataDetails.cardClickRate,
+            # YoutubeVideoDataDetails.cardTeaserClickRate,
+            # YoutubeVideoDataDetails.cardImpressions,
+            # YoutubeVideoDataDetails.cardTeaserImpressions,
+            # YoutubeVideoDataDetails.cardClicks,
+            # YoutubeVideoDataDetails.cardTeaserClicks,
+            # YoutubeVideoDataDetails.averageViewPercentage,
+            # YoutubeVideoDataDetails.averageViewDuration,
+            # YoutubeData.person_in_charge
+        ).join(
+            YoutubeVideoData, YoutubeVideoDataDetails.video_id == YoutubeVideoData.video_id
+        ).join(
+            YoutubeData, YoutubeVideoData.channel_id == YoutubeData.channel_id
+        ).filter(
+            and_(
+                YoutubeVideoDataDetails.checked_date >= start_date,
+                YoutubeVideoDataDetails.checked_date <= end_date,
+                YoutubeData.person_in_charge.like('%{}%'.format(name))#('%{}%'.format(user_name))
+            )
+        ).all()
+        data = [{'views': result.views,
+                'likes': result.likes,
+                'dislikes': result.dislikes,
+                'shares': result.shares,
+                'comments': result.comments,
+                'subscribersGained': result.subscribersGained,
+                'subscribersLost': result.subscribersLost,
+                'videosAddedToPlaylists': result.videosAddedToPlaylists,
+                'videosRemovedFromPlaylists': result.videosRemovedFromPlaylists,
+                'averageViewDuration': result.averageViewDuration,
+                'averageViewPercentage': result.averageViewPercentage,
+                'annotationImpressions': result.annotationImpressions,
+                'annotationClicks': result.annotationClicks,
+                'annotationCloses': result.annotationCloses,
+                'annotationClickThroughRate': result.annotationClickThroughRate,
+                'annotationCloseRate': result.annotationCloseRate,
+                'estimatedMinutesWatched': result.estimatedMinutesWatched,
+                'cardClickRate': result.cardClickRate,
+                'cardTeaserClickRate': result.cardTeaserClickRate,
+                'cardImpressions': result.cardImpressions,
+                'cardTeaserImpressions': result.cardTeaserImpressions,
+                'cardClicks': result.cardClicks,
+                'cardTeaserClicks': result.cardTeaserClicks
+                } for result in results]
+        report_data[name] = data
+    return report_data
 ####################################################################   
 @yt_bp.route('/test')
 def test(): 

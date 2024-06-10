@@ -240,6 +240,23 @@ def get_all_video_ids_5goalnews():
     for video in videos:
         video_ids.append(video.video_id)
     return video_ids
+###############################
+def get_all_name():
+    """
+    Retrieves all users from the User table.
+
+    Returns:
+        If the retrieval is successful, returns a JSON response with the user information and a status code of 200.
+        If the retrieval fails, returns a JSON response with an error message and a status code of 500.
+    """
+    if 'username' not in session or session['role'] != 'admin':
+        return jsonify({'error': 'Permission required!'}), 403
+
+    users = User.query.all()
+    user_data = [user.username for user in users]
+    
+    return user_data
 ###########################################################################
+
 CLIENT_SECRETS_FILE = "cred3.json"
 client_id, client_secret, token_uri = load_client_credentials(CLIENT_SECRETS_FILE)
