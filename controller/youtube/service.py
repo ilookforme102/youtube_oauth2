@@ -6,7 +6,7 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 from model.db_schema import app, db, User, GoogleAccount, YoutubeChannel,YoutubeData, FacebookAccount,YoutubeVideoData, FacebookPage
 import datetime
-from datetime import datetime
+from datetime import datetime,timedelta
 import time
 import json
 import os
@@ -178,5 +178,68 @@ def get_video_titles(credentials, video_ids):
     # Create a dictionary of video IDs to titles
     video_titles = {item['id']: item['snippet']['title'] for item in video_response.get('items', [])}
     return video_titles
+##########################Cron job#########################################
+def get_5goal_news_video_stats(video_id,n_days):
+    today = datetime.now()#.strftime('%Y-%m-%d')
+    # today_str = today.strftime('%Y-%m-%d')
+    data = request.args
+    # video_id =  data.get('video_id')
+    channel_name = '5GOAL NEWS'
+    # metrics = data.get('metrics')
+    list_metrics = [
+    'views',
+    'likes',
+    'dislikes',
+    'shares',
+    'comments',
+    'subscribersGained',
+    'subscribersLost',
+    'videosAddedToPlaylists',
+    'videosRemovedFromPlaylists',
+    'averageViewDuration',
+    'averageViewPercentage',
+    'annotationImpressions',
+    'annotationClicks',
+    'annotationCloses',
+    'annotationClickThroughRate',
+    'annotationCloseRate',
+    'estimatedMinutesWatched',
+    'cardClickRate',
+    'cardTeaserClickRate',
+    'cardImpressions',
+    'cardTeaserImpressions',
+    'cardClicks',
+    'cardTeaserClicks',
+    'averageViewPercentage',
+    'averageViewDuration']
+    metrics = ','.join(list_metrics)
+    n_days_befor =  today - timedelta(days=n_days)
+    n_days_befor_str =  n_days_befor.strftime('%Y-%m-%d')
+    # dimensions = 'day', #str(data.get('dimensions'))
+    start_date =n_days_befor_str #data.get('start_date',today)
+    end_date = n_days_befor_str#data.get('end_date',today)
+    refresh_token, channel_id = get_refresh_token(channel_name)
+    temp_access_token = access_token_generate(refresh_token)
+    credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
+    youtubeAnalytics = build('youtubeAnalytics', 'v2', credentials=credentials)
+    response = youtubeAnalytics.reports().query(
+        ids=f'channel=={channel_id}',
+        startDate=start_date,
+        endDate=end_date,
+        metrics=metrics,
+        dimensions= 'day',
+        filters=f'video=={video_id}',
+    ).execute()
+    data =  response['rows']
+    return data,n_days_befor_str
+def get_all_video_ids_5goalnews():
+    video_ids = []
+    videos = YoutubeVideoData.query.filter(
+        YoutubeVideoData.channel_name == '5GOAL NEWS'
+    ).all()
+    for video in videos:
+        video_ids.append(video.video_id)
+    return video_ids
+###########################################################################
 CLIENT_SECRETS_FILE = "cred3.json"
 client_id, client_secret, token_uri = load_client_credentials(CLIENT_SECRETS_FILE)

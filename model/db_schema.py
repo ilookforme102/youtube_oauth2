@@ -51,6 +51,38 @@ class YoutubeVideoData(db.Model):
     channel_name =  db.Column(db.String(255),  nullable = False)
     channel_id =  db.Column(db.String(255),  nullable = False)
     playlist_id = db.Column(db.String(255),  nullable = True)
+
+class YoutubeVideoDataDetails(db.Model):
+    __tablename__ = 'db_vn168_soc_yt_video_data_details'
+    id = db.Column(db.String(255),primary_key= True, unique = True, nullable = False)
+    video_id =  db.Column(db.String(255), nullable = False)
+    checked_date = db.Column(DateTime, nullable = False)
+    views = db.Column(db.Integer, nullable=True)
+    likes = db.Column(db.Integer, nullable=True)
+    dislikes = db.Column(db.Integer, nullable=True)
+    shares = db.Column(db.Integer, nullable=True)
+    comments = db.Column(db.Integer, nullable=True)
+    subscribersGained = db.Column(db.Integer, nullable=True)
+    subscribersLost = db.Column(db.Integer, nullable=True)
+    videosAddedToPlaylists = db.Column(db.Integer, nullable=True)
+    videosRemovedFromPlaylists = db.Column(db.Integer, nullable=True)
+    averageViewDuration = db.Column(db.Integer, nullable=True)
+    averageViewPercentage = db.Column(db.Integer, nullable=True)
+    annotationImpressions = db.Column(db.Integer, nullable=True)
+    annotationClicks = db.Column(db.Integer, nullable=True)
+    annotationCloses = db.Column(db.Integer, nullable=True)
+    annotationClickThroughRate = db.Column(db.Integer, nullable=True)
+    annotationCloseRate = db.Column(db.Integer, nullable=True)
+    estimatedMinutesWatched = db.Column(db.Integer, nullable=True)
+    cardClickRate = db.Column(db.Integer, nullable=True)
+    cardTeaserClickRate = db.Column(db.Integer, nullable=True)
+    cardImpressions = db.Column(db.Integer, nullable=True)
+    cardTeaserImpressions = db.Column(db.Integer, nullable=True)
+    cardClicks = db.Column(db.Integer, nullable=True)
+    cardTeaserClicks = db.Column(db.Integer, nullable=True)
+    averageViewPercentage = db.Column(db.Integer, nullable=True)
+    averageViewDuration = db.Column(db.Integer, nullable=True)
+
 class YoutubeData(db.Model):
     __tablename__ = 'db_vn168_soc_yt_data'
     id = db.Column(db.Integer, primary_key = True, autoincrement = True)

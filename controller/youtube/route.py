@@ -4,8 +4,9 @@ from flask import Flask, redirect, request, session, url_for, jsonify
 from google_auth_oauthlib.flow import Flow, InstalledAppFlow
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-from model.db_schema import app, db, User, GoogleAccount, YoutubeChannel,YoutubeData, FacebookAccount,YoutubeVideoData, FacebookPage
-from controller.youtube.service import credentials_to_dict,session_to_credentials, load_client_credentials,get_refresh_token,access_token_generate,credentials_generate,get_video_titles,get_all_videos,get_video_comments,comment_classification
+from model.db_schema import app, db, User,YoutubeVideoDataDetails, GoogleAccount, YoutubeChannel,YoutubeData, FacebookAccount,YoutubeVideoData, FacebookPage
+from controller.youtube.service import credentials_to_dict,session_to_credentials, load_client_credentials,get_refresh_token,access_token_generate,credentials_generate,get_video_titles,get_all_videos,get_video_comments,comment_classification,get_5goal_news_video_stats,get_all_video_ids_5goalnews
+from sqlalchemy import Date,Time,DateTime , and_, func, case
       
 import datetime
 from datetime import datetime
@@ -841,33 +842,188 @@ def get_channel_video_list():
     return jsonify({'items':paginated_data,'page':page,'per_page':per_page, 'total_items':len(data)})
 
 ################################################################################
+######################Cron endpoint#############################################
+#---------get channels-------
+#---------get videos---------
+#---------get video detail---
+@yt_bp.route('/insights/5goal_news_video_stats')
+def get_video_stats():
+    with open('n_days.txt', 'r') as file:
+        n_days = int(file.read().strip())
+    video_ids = get_all_video_ids_5goalnews()
+    for video_id in video_ids:
+        data,n_days_befor_str = get_5goal_news_video_stats(video_id=video_id, n_days=n_days)
+        id = n_days_befor_str + '_' + video_id
+        if YoutubeVideoDataDetails.query.get(id):
+            continue
+        else:
+            try:
+                new_video_detail_data = YoutubeVideoDataDetails(
+                    id=id,
+                    video_id=video_id,
+                    checked_date=data[0],
+                    views=data[1],
+                    likes=data[2],
+                    dislikes=data[3],
+                    shares=data[4],
+                    comments=data[5],
+                    subscribersGained=data[6],
+                    subscribersLost=data[7],
+                    videosAddedToPlaylists=data[8],
+                    videosRemovedFromPlaylists=data[9],
+                    averageViewDuration=data[10],
+                    averageViewPercentage=data[11],
+                    annotationImpressions=data[12],
+                    annotationClicks=data[13],
+                    annotationCloses=data[14],
+                    annotationClickThroughRate=data[15],
+                    annotationCloseRate=data[16],
+                    estimatedMinutesWatched=data[17],
+                    cardClickRate=data[18],
+                    cardTeaserClickRate=data[19],
+                    cardImpressions=data[20],
+                    cardTeaserImpressions=data[21],
+                    cardClicks=data[22],
+                    cardTeaserClicks=data[23]
+                )
 
+                # Save the new video detail data to the database
+                db.session.add(new_video_detail_data)
+                db.session.commit()
+            except IndexError:
+                new_video_detail_data = YoutubeVideoDataDetails(
+                    id=n_days_befor_str + '_' + video_id,
+                    video_id=video_id,
+                    checked_date=n_days_befor_str,
+                    views=0,
+                    likes=0,
+                    dislikes= 0,
+                    shares=0,
+                    comments=0,
+                    subscribersGained=0,
+                    subscribersLost=0,
+                    videosAddedToPlaylists=0,
+                    videosRemovedFromPlaylists=0,
+                    averageViewDuration=0,
+                    averageViewPercentage=0,
+                    annotationImpressions=0,
+                    annotationClicks=0,
+                    annotationCloses=0,
+                    annotationClickThroughRate=0,
+                    annotationCloseRate=0,
+                    estimatedMinutesWatched=0,
+                    cardClickRate=0,
+                    cardTeaserClickRate=0,
+                    cardImpressions=0,
+                    cardTeaserImpressions=0,
+                    cardClicks=0,
+                    cardTeaserClicks=0
+                )
 
-###################################################################
-@yt_bp.route("insights/channel_stat", methods = ['POST','GET'])
-def get_channel_stat():
+                # Save the new video detail data to the database
+                db.session.add(new_video_detail_data)
+                db.session.commit()
+    with open('n_days.txt', 'w') as file:
+        file.write(str(n_days + 1))
+    return jsonify({'message':'all video crawl'}),200
+    # data = get_5goal_news_video_stats(video_id= video_ids[0],n_days= 0)
+#######################Personal Report#################################
+@yt_bp.route('/report/personal_report')
+def get_personal_report():
     data = request.args
-    channel_name = data.get('channel_name')
-    refresh_token, channel_id = get_refresh_token(channel_name)
-    # temp_access_token = access_token_generate(refresh_token)
-    credentials = Credentials(
-        None,  # No initial access token, it will be obtained via the refresh token.
-        refresh_token=refresh_token,
-        token_uri=token_uri,
-        client_id=client_id,
-        client_secret=client_secret
-    )
-
-    # credentials = credentials_generate(temp_access_token, refresh_token,token_uri,client_id,client_secret)
-    # user__id = session['user_id']
-    #get channel id
-    youtube = build('youtube', 'v3', credentials=credentials)
-    query = youtube.channels().list(
-        part='id,snippet,contentDetails,statistics',
-        id = channel_id
-    )
-    response = query.execute()
-    return jsonify({'hahha':response})
+    user_name =data.get('user_name')
+    start_date =  data.get('start_date')
+    end_date = data.get('end_date')
+    results = db.session.query(
+        func.sum(YoutubeVideoDataDetails.views).label('views'),
+        func.sum(YoutubeVideoDataDetails.likes).label('likes'),
+        func.sum(YoutubeVideoDataDetails.dislikes).label('dislikes'),
+        func.sum(YoutubeVideoDataDetails.shares).label('shares'),
+        func.sum(YoutubeVideoDataDetails.comments).label('comments'),
+        func.sum(YoutubeVideoDataDetails.subscribersGained).label('subscribersGained'),
+        func.sum(YoutubeVideoDataDetails.subscribersLost).label('subscribersLost'),
+        func.sum(YoutubeVideoDataDetails.videosAddedToPlaylists).label('videosAddedToPlaylists'),
+        func.sum(YoutubeVideoDataDetails.videosRemovedFromPlaylists).label('videosRemovedFromPlaylists'),
+        func.sum(YoutubeVideoDataDetails.averageViewDuration).label('averageViewDuration'),
+        func.sum(YoutubeVideoDataDetails.averageViewPercentage).label('averageViewPercentage'),
+        func.sum(YoutubeVideoDataDetails.annotationImpressions).label('annotationImpressions'),
+        func.sum(YoutubeVideoDataDetails.annotationClicks).label('annotationClicks'),
+        func.sum(YoutubeVideoDataDetails.annotationCloses).label('annotationCloses'),
+        func.sum(YoutubeVideoDataDetails.annotationClickThroughRate).label('annotationClickThroughRate'),
+        func.sum(YoutubeVideoDataDetails.annotationCloseRate).label('annotationCloseRate'),
+        func.sum(YoutubeVideoDataDetails.estimatedMinutesWatched).label('estimatedMinutesWatched'),
+        func.sum(YoutubeVideoDataDetails.cardClickRate).label('cardClickRate'),
+        func.sum(YoutubeVideoDataDetails.cardTeaserClickRate).label('cardTeaserClickRate'),
+        func.sum(YoutubeVideoDataDetails.cardImpressions).label('cardImpressions'),
+        func.sum(YoutubeVideoDataDetails.cardTeaserImpressions).label('cardTeaserImpressions'),
+        func.sum(YoutubeVideoDataDetails.cardClicks).label('cardClicks'),
+        func.sum(YoutubeVideoDataDetails.cardTeaserClicks).label('cardTeaserClicks')
+       
+        # YoutubeVideoDataDetails.video_id,
+        # YoutubeVideoDataDetails.checked_date,
+        # YoutubeVideoDataDetails.views,
+        # YoutubeVideoDataDetails.likes,
+        # YoutubeVideoDataDetails.dislikes,
+        # YoutubeVideoDataDetails.shares,
+        # YoutubeVideoDataDetails.comments,
+        # YoutubeVideoDataDetails.subscribersGained,
+        # YoutubeVideoDataDetails.subscribersLost,
+        # YoutubeVideoDataDetails.videosAddedToPlaylists,
+        # YoutubeVideoDataDetails.videosRemovedFromPlaylists,
+        # YoutubeVideoDataDetails.averageViewDuration,
+        # YoutubeVideoDataDetails.averageViewPercentage,
+        # YoutubeVideoDataDetails.annotationImpressions,
+        # YoutubeVideoDataDetails.annotationClicks,
+        # YoutubeVideoDataDetails.annotationCloses,
+        # YoutubeVideoDataDetails.annotationClickThroughRate,
+        # YoutubeVideoDataDetails.annotationCloseRate,
+        # YoutubeVideoDataDetails.estimatedMinutesWatched,
+        # YoutubeVideoDataDetails.cardClickRate,
+        # YoutubeVideoDataDetails.cardTeaserClickRate,
+        # YoutubeVideoDataDetails.cardImpressions,
+        # YoutubeVideoDataDetails.cardTeaserImpressions,
+        # YoutubeVideoDataDetails.cardClicks,
+        # YoutubeVideoDataDetails.cardTeaserClicks,
+        # YoutubeVideoDataDetails.averageViewPercentage,
+        # YoutubeVideoDataDetails.averageViewDuration,
+        # YoutubeData.person_in_charge
+    ).join(
+        YoutubeVideoData, YoutubeVideoDataDetails.video_id == YoutubeVideoData.video_id
+    ).join(
+        YoutubeData, YoutubeVideoData.channel_id == YoutubeData.channel_id
+    ).filter(
+        and_(
+            YoutubeVideoDataDetails.checked_date >= start_date,
+            YoutubeVideoDataDetails.checked_date <= end_date,
+            YoutubeData.person_in_charge.like('%{}%'.format(user_name))#('%{}%'.format(user_name))
+        )
+    ).all()
+    data = [{'views': result.views,
+            'likes': result.likes,
+            'dislikes': result.dislikes,
+            'shares': result.shares,
+            'comments': result.comments,
+            'subscribersGained': result.subscribersGained,
+            'subscribersLost': result.subscribersLost,
+            'videosAddedToPlaylists': result.videosAddedToPlaylists,
+            'videosRemovedFromPlaylists': result.videosRemovedFromPlaylists,
+            'averageViewDuration': result.averageViewDuration,
+            'averageViewPercentage': result.averageViewPercentage,
+            'annotationImpressions': result.annotationImpressions,
+            'annotationClicks': result.annotationClicks,
+            'annotationCloses': result.annotationCloses,
+            'annotationClickThroughRate': result.annotationClickThroughRate,
+            'annotationCloseRate': result.annotationCloseRate,
+            'estimatedMinutesWatched': result.estimatedMinutesWatched,
+            'cardClickRate': result.cardClickRate,
+            'cardTeaserClickRate': result.cardTeaserClickRate,
+            'cardImpressions': result.cardImpressions,
+            'cardTeaserImpressions': result.cardTeaserImpressions,
+            'cardClicks': result.cardClicks,
+            'cardTeaserClicks': result.cardTeaserClicks
+             } for result in results]
+    return data
+####################################################################   
 @yt_bp.route('/test')
 def test(): 
     # end_date = datetime.date.today().isoformat()
