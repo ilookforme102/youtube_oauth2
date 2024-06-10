@@ -936,7 +936,7 @@ def get_personal_report():
     
     start_date =  data.get('start_date')
     end_date = data.get('end_date')
-    report_data = {}
+    report_data = []
     for name in names:
         results = db.session.query(
             func.sum(YoutubeVideoDataDetails.views).label('views'),
@@ -1002,7 +1002,8 @@ def get_personal_report():
                 YoutubeData.person_in_charge.like('%{}%'.format(name))#('%{}%'.format(user_name))
             )
         ).all()
-        data = [{'views': result.views,
+        data = [{'pic': name,
+                'views': result.views,
                 'likes': result.likes,
                 'dislikes': result.dislikes,
                 'shares': result.shares,
@@ -1026,7 +1027,7 @@ def get_personal_report():
                 'cardClicks': result.cardClicks,
                 'cardTeaserClicks': result.cardTeaserClicks
                 } for result in results]
-        report_data[name] = data[0]
+        report_data.append(data[0])
     return report_data
 ####################################################################   
 @yt_bp.route('/test')
