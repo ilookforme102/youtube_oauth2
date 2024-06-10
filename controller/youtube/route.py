@@ -1026,7 +1026,7 @@ def get_personal_report():
                 'cardClicks': result.cardClicks,
                 'cardTeaserClicks': result.cardTeaserClicks
                 } for result in results]
-        report_data[name] = data
+        report_data[name] = data[0]
     return report_data
 ####################################################################   
 @yt_bp.route('/test')
