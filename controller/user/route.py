@@ -90,6 +90,71 @@ def create_user():
         return jsonify({'message': 'User created successfully'}), 200
 
     return jsonify({'error': 'Method not allowed'}), 405
+@user_bp.route('/edit_user/<username>', methods=['PUT'])
+def edit_user(username):
+    """
+    Edits the information of a user based on their username.
+    Args:
+        username (str): The username of the user to be edited.
+    Returns:
+        If the user edit is successful, returns a JSON response with a success message and a status code of 200.
+        If the user edit fails due to the logged in user not having the role 'admin', returns a JSON response with an error message and a status code of 403.
+        If the user edit fails due to the user not found, returns a JSON response with an error message and a status code of 404.
+    """
+    if 'username' not in session or session['role'] != 'admin':
+        return jsonify({'error': 'Permission required!'}), 403
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    if request.method == 'PUT':
+        password = request.form.get('password')
+        company_name = request.form.get('company_name')
+        company_id = request.form.get('company_id')
+        is_active = request.form.get('is_active')
+        team = request.form.get('team')
+        role = request.form.get('role')
+        if password:
+            user.password = password
+        if company_name:
+            user.company_name = company_name
+        if company_id:
+            user.company_id = company_id
+        if is_active:
+            user.is_active = is_active
+        if team:
+            user.team = team
+        if role:
+            user.role = role
+
+        db.session.commit()
+
+        return jsonify({'message': f'User {username} edited successfully'}), 200
+
+    return jsonify({'error': 'Method not allowed'}), 405
+@user_bp.route('/delete_user/<username>', methods=['DELETE'])
+def delete_user(username):
+    """
+    Deletes a user based on their username.
+    Args:
+        username (str): The username of the user to be deleted.
+    Returns:
+        If the user deletion is successful, returns a JSON response with a success message and a status code of 200.
+        If the user deletion fails due to the logged in user not having the role 'admin', returns a JSON response with an error message and a status code of 403.
+        If the user deletion fails due to the user not found, returns a JSON response with an error message and a status code of 404.
+    """
+    if 'username' not in session or session['role'] != 'admin':
+        return jsonify({'error': 'Permission required!'}), 403
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+
+    db.session.delete(user)
+    db.session.commit()
+
+    return jsonify({'message': f'User {username} deleted successfully'}), 200
 @user_bp.route('/login', methods=['POST'])
 def login():
     """
@@ -121,28 +186,7 @@ def login():
 
     return  jsonify({'error': 'unauthenticated login'}), 401
 # Logout endpoint
-@user_bp.route('/delete_user/<username>', methods=['DELETE'])
-def delete_user(username):
-    """
-    Deletes a user based on their username.
-    Args:
-        username (str): The username of the user to be deleted.
-    Returns:
-        If the user deletion is successful, returns a JSON response with a success message and a status code of 200.
-        If the user deletion fails due to the logged in user not having the role 'admin', returns a JSON response with an error message and a status code of 403.
-        If the user deletion fails due to the user not found, returns a JSON response with an error message and a status code of 404.
-    """
-    if 'username' not in session or session['role'] != 'admin':
-        return jsonify({'error': 'Permission required!'}), 403
 
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    db.session.delete(user)
-    db.session.commit()
-
-    return jsonify({'message': f'User {username} deleted successfully'}), 200
 @user_bp.route('/logout')
 def logout():
     session.clear()

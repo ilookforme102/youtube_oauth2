@@ -8,3 +8,4 @@ cred9.json
 .env
 google_remake.py
 google_oauth2.py 
+vn_offensive_words.txt
